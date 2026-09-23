@@ -1,26 +1,89 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #161311;
+  --bg-raised: #1f1b18;
+  --bg-raised-hover: #29231f;
+  --line: #332c27;
+  --text: #f5f1ec;
+  --text-dim: #a39a90;
+  --text-faint: #6b625a;
+  --accent: #ff6b35;
+  --accent-hover: #ff8354;
+  --accent-ink: #2a0f04;
+  --accent-soft: #ff6b3522;
+  --danger: #f2555a;
+  --danger-bg: #3a1c1c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
+  /* Fondo con textura: un tinte cálido difuso arriba a la izquierda y
+     un leve grano radial general, para que no quede plano como un
+     color sólido de placeholder. */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 900px 600px at 10% -10%, rgba(255, 107, 53, 0.10), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(255, 131, 84, 0.05), transparent 55%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Scrollbar discreta, a juego con la paleta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* Foco de teclado visible y coherente con la marca */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

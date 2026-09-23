@@ -37,13 +37,26 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    // IMPORTANTE: copiamos las cookies refrescadas por Supabase a la
+    // respuesta de redirección. Si no lo hacemos, el navegador sigue
+    // mandando cookies viejas en la siguiente petición y getUser()
+    // alterna entre user/null en cada request, provocando un bucle
+    // infinito de redirecciones /login <-> /calendario.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/calendario";
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
   return supabaseResponse;
