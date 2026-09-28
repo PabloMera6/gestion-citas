@@ -99,10 +99,10 @@ export default function CrearClaseModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-bg-raised border border-line rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+        className="w-full sm:max-w-md bg-bg-raised border border-line sm:border-text/70 sm:shadow-[8px_8px_0_0_rgba(255,255,255,0.15)] p-6 pop-in max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold">Nueva clase</h2>
+          <h2 className="font-display text-2xl">Nueva clase</h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
@@ -116,43 +116,43 @@ export default function CrearClaseModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-dim mb-1.5">
+            <label className="label-mono block mb-1.5">
               Nombre de la clase
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="HIIT, Fuerza, Movilidad…"
-              className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-dim mb-1.5">
+            <label className="label-mono block mb-1.5">
               Descripción (opcional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+              className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-text-dim mb-1.5">
+              <label className="label-mono block mb-1.5">
                 Inicio
               </label>
               <input
                 type="datetime-local"
                 value={startsAt}
                 onChange={(e) => setStartsAt(e.target.value)}
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-dim mb-1.5">
+              <label className="label-mono block mb-1.5">
                 Duración (min)
               </label>
               <input
@@ -161,14 +161,14 @@ export default function CrearClaseModal({
                 step={15}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-text-dim mb-1.5">
+              <label className="label-mono block mb-1.5">
                 Aforo máximo
               </label>
               <input
@@ -176,17 +176,17 @@ export default function CrearClaseModal({
                 min={1}
                 value={maxCapacity}
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-dim mb-1.5">
+              <label className="label-mono block mb-1.5">
                 Grupo (opcional)
               </label>
               <select
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Sin grupo</option>
                 {groups.map((g) => (
@@ -207,7 +207,7 @@ export default function CrearClaseModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent text-accent-ink rounded-lg py-2.5 font-semibold shadow-sm shadow-accent/20 hover:bg-accent-hover active:bg-accent transition-colors disabled:opacity-50 disabled:hover:bg-accent"
+            className="w-full bg-accent text-accent-ink rounded-lg py-2.5 font-semibold disabled:opacity-50"
           >
             {loading ? "Creando…" : "Crear clase"}
           </button>

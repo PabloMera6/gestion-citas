@@ -51,7 +51,7 @@ export default function NuevoAnuncioForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mb-6 rounded-lg bg-accent text-accent-ink px-4 py-2.5 text-sm font-semibold shadow-sm shadow-accent/20 hover:bg-accent-hover active:bg-accent transition-colors"
+        className="mb-6 bg-accent text-accent-ink px-4 py-2.5 text-sm font-semibold"
       >
         + Publicar anuncio
       </button>
@@ -61,20 +61,20 @@ export default function NuevoAnuncioForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 rounded-xl border border-line bg-bg-raised p-4 space-y-3"
+      className="mb-6 border border-line bg-bg-raised p-4 space-y-3"
     >
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Título del anuncio"
-        className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent"
+        className="w-full border border-line bg-bg px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent"
       />
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="Escribe el mensaje para tus clientes…"
         rows={3}
-        className="w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+        className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
       />
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm text-text-dim">
@@ -97,7 +97,7 @@ export default function NuevoAnuncioForm() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-accent text-accent-ink px-4 py-2 text-sm font-semibold shadow-sm shadow-accent/20 hover:bg-accent-hover active:bg-accent transition-colors disabled:opacity-50 disabled:hover:bg-accent"
+            className="bg-accent text-accent-ink px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
             {loading ? "Publicando…" : "Publicar"}
           </button>

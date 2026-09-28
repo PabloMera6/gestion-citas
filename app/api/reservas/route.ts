@@ -51,11 +51,61 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Esta clase ya ha empezado." }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  // Si el cliente ya reservó esta clase antes y la canceló, la fila sigue
+  // existiendo (cancelar solo cambia su estado) y la restricción
+  // unique(session_id, client_id) impide insertar otra. En ese caso se
+  // REACTIVA la reserva existente en vez de crear una nueva.
+  const { data: existing } = await supabase
     .from("bookings")
-    .insert({ session_id: sessionId, client_id: user.id })
-    .select()
-    .single();
+    .select("id, status")
+    .eq("session_id", sessionId)
+    .eq("client_id", user.id)
+    .maybeSingle();
+
+  if (existing?.status === "confirmed") {
+    return NextResponse.json(
+      { error: "Ya tienes una reserva para esta clase." },
+      { status: 400 }
+    );
+  }
+
+  const query = existing
+    ? (async () => {
+        // Aforo: el trigger de la BD también lo comprueba (ver
+        // migracion_reservas.sql), pero damos un mensaje claro aquí.
+        const [{ count }, { data: cap }] = await Promise.all([
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("session_id", sessionId!)
+            .eq("status", "confirmed"),
+          supabase
+            .from("class_sessions")
+            .select("max_capacity")
+            .eq("id", sessionId!)
+            .single(),
+        ]);
+        if (cap && (count ?? 0) >= cap.max_capacity) {
+          return {
+            data: null,
+            error: { code: "FULL", message: "La clase está completa." },
+          };
+        }
+        return supabase
+          .from("bookings")
+          .update({ status: "confirmed", cancelled_at: null })
+          .eq("id", existing.id)
+          .eq("client_id", user.id)
+          .select()
+          .single();
+      })()
+    : supabase
+        .from("bookings")
+        .insert({ session_id: sessionId, client_id: user.id })
+        .select()
+        .single();
+
+  const { data, error } = await query;
 
   if (error) {
     // El trigger de aforo lanza una excepción con mensaje legible;

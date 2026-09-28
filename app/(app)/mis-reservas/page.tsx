@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ReservaButton from "@/components/ReservaButton";
 import { formatFullDate, formatTime } from "@/lib/date";
+import { trainerPatternClass } from "@/lib/pattern";
 import type { BookingWithSession } from "@/lib/types/database";
 
 export default async function MisReservasPage() {
@@ -36,13 +37,13 @@ export default async function MisReservasPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">Mis reservas</h1>
-      <p className="text-text-dim text-sm mb-6">
+      <h1 className="mb-1">Mis reservas</h1>
+      <p className="text-text-dim text-sm mb-6 mt-4">
         Aquí puedes ver tus próximas clases y tu historial.
       </p>
 
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-dim uppercase tracking-wide mb-3">
+        <h2 className="label-mono mb-3">
           Próximas ({upcoming.length})
         </h2>
         {upcoming.length === 0 ? (
@@ -58,7 +59,7 @@ export default async function MisReservasPage() {
 
       {past.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-text-dim uppercase tracking-wide mb-3">
+          <h2 className="label-mono mb-3">
             Historial
           </h2>
           <div className="space-y-2.5">
@@ -82,18 +83,18 @@ function ReservaCard({
   const session = booking.session;
   const start = new Date(session.starts_at);
   const isPast = start < new Date();
-  const color = session.trainer_color ?? "#6366f1";
 
   return (
     <div
-      className={`flex items-center justify-between gap-4 rounded-xl border border-line bg-bg-raised px-4 py-3.5 ${
+      className={`flex items-center justify-between gap-4 border border-line bg-bg-raised px-4 py-3.5 ${
         muted ? "opacity-60" : ""
       }`}
     >
       <div className="flex items-start gap-3 min-w-0">
         <span
-          className="w-1 self-stretch rounded-full shrink-0"
-          style={{ backgroundColor: color }}
+          className={`w-2 self-stretch border border-text shrink-0 ${trainerPatternClass(
+            session.trainer_id
+          )}`}
         />
         <div className="min-w-0">
           <p className="font-medium truncate">{session.name}</p>
@@ -105,7 +106,7 @@ function ReservaCard({
             {session.group_name ? ` · ${session.group_name}` : ""}
           </p>
           {booking.status === "cancelled" && (
-            <p className="text-xs text-danger mt-0.5">Cancelaste esta reserva</p>
+            <p className="text-xs text-danger mt-0.5 line-through">Cancelaste esta reserva</p>
           )}
         </div>
       </div>
@@ -126,7 +127,7 @@ function ReservaCard({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-line px-6 py-10 text-center text-text-dim text-sm">
+    <div className="border border-dashed border-line px-6 py-10 text-center text-text-dim text-sm">
       {text}
     </div>
   );

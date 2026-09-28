@@ -111,3 +111,40 @@ export const TRAINER_COLORS = [
 // Número mínimo de horas de antelación para poder cancelar una reserva.
 // Debe coincidir con public.cancellation_limit_hours() en la base de datos.
 export const CANCELLATION_LIMIT_HOURS = 4;
+
+// ---------------------------------------------------------
+// Miembros y bonos de clases
+// ---------------------------------------------------------
+export interface MemberDetails {
+  member_id: string;
+  class_credits: number;
+  updated_at: string;
+}
+
+export interface Member {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  created_at: string;
+  class_credits: number;
+}
+
+export interface CreditMovement {
+  id: string;
+  member_id: string;
+  trainer_id: string | null;
+  delta: number;
+  balance_after: number;
+  reason: string | null;
+  created_at: string;
+  trainer_name?: string | null;
+}
+
+// Miembro apuntado a una sesión (para el modal de detalle)
+export interface SessionMember {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  class_credits: number | null;
+  booked_at: string;
+}

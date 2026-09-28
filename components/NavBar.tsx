@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types/database";
+import { initialsOf } from "@/lib/pattern";
 import type { ReactElement } from "react";
 
 const ICONS: Record<string, ReactElement> = {
@@ -26,6 +27,13 @@ const ICONS: Record<string, ReactElement> = {
       <path d="M3.5 19c.5-3 2.4-4.8 5-4.8s4.5 1.8 5 4.8M14 19c.4-2.3 1.8-3.7 3.7-3.7s3.3 1.4 3.7 3.7" strokeLinecap="round" />
     </svg>
   ),
+  miembros: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" stroke="currentColor" className="w-5 h-5">
+      <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+      <circle cx="9" cy="10.5" r="2" />
+      <path d="M5.8 16c.4-1.7 1.5-2.5 3.2-2.5s2.8.8 3.2 2.5M14.5 9.5h3.5M14.5 12.5h3.5" strokeLinecap="round" />
+    </svg>
+  ),
   "mis-reservas": (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" stroke="currentColor" className="w-5 h-5">
       <path d="M9 12.5l2 2 4-4.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -45,11 +53,15 @@ export default function NavBar({ profile }: { profile: Profile }) {
   const router = useRouter();
   const supabase = createClient();
 
+  const isTrainer = profile.role === "trainer";
+
   const links = [
     { href: "/calendario", label: "Calendario", key: "calendario" },
     { href: "/tablon", label: "Tablón", key: "tablon" },
     { href: "/entrenadores", label: "Entrenadores", key: "entrenadores" },
-    { href: "/mis-reservas", label: "Mis reservas", key: "mis-reservas" },
+    ...(isTrainer
+      ? [{ href: "/miembros", label: "Miembros", key: "miembros" }]
+      : [{ href: "/mis-reservas", label: "Mis reservas", key: "mis-reservas" }]),
     { href: "/perfil", label: "Mi perfil", key: "perfil" },
   ];
 
@@ -59,21 +71,20 @@ export default function NavBar({ profile }: { profile: Profile }) {
     router.refresh();
   }
 
-  const initials = profile.full_name
-    .split(" ")
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
+  const initials = initialsOf(profile.full_name);
 
   return (
     <>
       {/* Sidebar desktop */}
       <aside className="hidden sm:flex sm:flex-col sm:w-60 sm:shrink-0 sm:h-screen sm:sticky sm:top-0 border-r border-line bg-bg-raised/40 px-4 py-6">
-        <div className="flex items-center gap-2.5 px-2 mb-8">
-          <span className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-accent-ink font-bold text-sm">
-            M
-          </span>
-          <span className="font-semibold text-lg tracking-tight">MiGym</span>
+        <div className="px-2 mb-8">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 bg-accent flex items-center justify-center text-accent-ink font-display text-xl leading-none">
+              M
+            </span>
+            <span className="font-display text-2xl leading-none">MiGym</span>
+          </div>
+          <div className="hazard h-1.5 mt-4 opacity-90" aria-hidden />
         </div>
 
         <nav className="flex flex-col gap-1">
@@ -83,15 +94,12 @@ export default function NavBar({ profile }: { profile: Profile }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 text-xs font-medium uppercase tracking-[0.12em] transition-colors ${
                   active
-                    ? "bg-accent/10 text-accent"
+                    ? "bg-accent text-accent-ink"
                     : "text-text-dim hover:bg-bg-raised-hover hover:text-text"
                 }`}
               >
-                {active && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-accent" />
-                )}
                 {ICONS[link.key]}
                 {link.label}
               </Link>
@@ -101,17 +109,14 @@ export default function NavBar({ profile }: { profile: Profile }) {
 
         <div className="mt-auto pt-6 border-t border-line flex items-center gap-3 px-2">
           <Link href="/perfil" className="flex items-center gap-3 min-w-0 flex-1 group">
-            <span
-              className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-              style={{ backgroundColor: profile.color + "33", color: profile.color }}
-            >
+            <span className="w-9 h-9 rounded-full border border-text flex items-center justify-center text-xs font-semibold shrink-0">
               {initials}
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">
                 {profile.full_name}
               </p>
-              <p className="text-xs text-text-dim">
+              <p className="label-mono">
                 {profile.role === "trainer" ? "Entrenador" : "Cliente"}
               </p>
             </div>
@@ -133,12 +138,12 @@ export default function NavBar({ profile }: { profile: Profile }) {
       <div className="sm:hidden">
         <div className="flex items-center justify-between h-14 px-4 border-b border-line bg-bg-raised/60 backdrop-blur">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-md bg-accent flex items-center justify-center text-accent-ink font-bold text-xs">
+            <span className="w-7 h-7 bg-accent flex items-center justify-center text-accent-ink font-display text-base leading-none">
               M
             </span>
-            <span className="font-semibold">MiGym</span>
+            <span className="font-display text-xl leading-none">MiGym</span>
           </div>
-          <button onClick={handleLogout} className="text-sm text-text-dim">
+          <button onClick={handleLogout} className="label-mono hover:text-text">
             Salir
           </button>
         </div>
@@ -149,8 +154,8 @@ export default function NavBar({ profile }: { profile: Profile }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex flex-col items-center gap-0.5 py-2 px-2 flex-1 text-[11px] font-medium transition-colors ${
-                  active ? "text-accent" : "text-text-dim"
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 flex-1 text-[10px] font-medium uppercase tracking-wider transition-colors border-t-2 ${
+                  active ? "text-text border-accent" : "text-text-dim border-transparent"
                 }`}
               >
                 {ICONS[link.key]}

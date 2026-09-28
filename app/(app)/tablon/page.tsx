@@ -36,34 +36,35 @@ export default async function TablonPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">
+      <h1 className="mb-1">
         Tablón de anuncios
       </h1>
-      <p className="text-text-dim text-sm mb-6">
+      <p className="text-text-dim text-sm mb-6 mt-4">
         Novedades, avisos y cambios de horario publicados por los entrenadores.
       </p>
 
       {profile?.role === "trainer" && <NuevoAnuncioForm />}
 
       {(announcements ?? []).length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line px-6 py-12 text-center text-text-dim text-sm">
+        <div className="border border-dashed border-line px-6 py-12 text-center text-text-dim text-sm">
           Todavía no hay anuncios publicados.
         </div>
       ) : (
         <div className="space-y-3">
           {(announcements ?? []).map((a) => {
-            const color = a.author?.color ?? "#6366f1";
             return (
               <article
                 key={a.id}
-                className={`rounded-xl border bg-bg-raised px-5 py-4 ${
-                  a.pinned ? "border-accent/40" : "border-line"
+                className={`border bg-bg-raised px-5 py-4 ${
+                  a.pinned
+                    ? "border-text shadow-[5px_5px_0_0_rgba(255,255,255,0.85)]"
+                    : "border-line"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3 mb-1.5">
-                  <h2 className="font-semibold">{a.title}</h2>
+                  <h2 className="font-display text-xl">{a.title}</h2>
                   {a.pinned && (
-                    <span className="shrink-0 text-[10px] font-semibold text-accent-ink bg-accent rounded-full px-2 py-0.5">
+                    <span className="shrink-0 label-mono !text-accent-ink bg-accent px-2 py-0.5">
                       Fijado
                     </span>
                   )}
@@ -71,11 +72,8 @@ export default async function TablonPage() {
                 <p className="text-sm text-text-dim whitespace-pre-wrap mb-3">
                   {a.content}
                 </p>
-                <div className="flex items-center gap-1.5 text-xs text-text-faint">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
+                <div className="flex items-center gap-1.5 font-mono-ui text-[11px] text-text-faint">
+                  <span className="w-1.5 h-1.5 bg-text" />
                   {a.author?.full_name ?? "Entrenador"} ·{" "}
                   <span className="capitalize">
                     {formatFullDate(new Date(a.created_at))}

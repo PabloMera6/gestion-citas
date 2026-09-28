@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReservaButton from "./ReservaButton";
+import { trainerPatternClass } from "@/lib/pattern";
 import CrearClaseModal from "./CrearClaseModal";
 import {
   getWeekDays,
@@ -72,12 +73,12 @@ export default function CalendarioSemana({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight capitalize">
+          <h1 className="capitalize">
             {formatMonthLabel(reference)}
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-line bg-bg-raised overflow-hidden">
+          <div className="flex items-center border border-line bg-bg-raised overflow-hidden">
             <button
               onClick={() => goToWeek(-1)}
               aria-label="Semana anterior"
@@ -89,7 +90,7 @@ export default function CalendarioSemana({
             </button>
             <button
               onClick={goToday}
-              className="px-3 py-2 text-sm font-medium border-x border-line text-text hover:bg-bg-raised-hover transition-colors"
+              className="px-3 py-2 label-mono !text-text border-x border-line hover:bg-bg-raised-hover transition-colors"
             >
               Hoy
             </button>
@@ -109,7 +110,7 @@ export default function CalendarioSemana({
                 setPrefillSlot(null);
                 setModalOpen(true);
               }}
-              className="rounded-lg bg-accent text-accent-ink px-4 py-2 text-sm font-semibold shadow-sm shadow-accent/20 hover:bg-accent-hover active:bg-accent transition-colors"
+              className="bg-accent text-accent-ink px-4 py-2.5 font-semibold"
             >
               + Nueva clase
             </button>
@@ -118,7 +119,7 @@ export default function CalendarioSemana({
       </div>
 
       {/* Grid semanal: cabecera de días */}
-      <div className="overflow-x-auto rounded-xl border border-line bg-bg-raised/60 shadow-xl shadow-black/20">
+      <div className="overflow-x-auto border border-text/70 bg-bg-raised/60 shadow-[6px_6px_0_0_rgba(255,255,255,0.12)]">
         <div className="min-w-[780px]">
           <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-line sticky top-0 bg-bg-raised z-10">
             <div />
@@ -129,12 +130,12 @@ export default function CalendarioSemana({
                   isToday(day) ? "bg-accent/10" : ""
                 }`}
               >
-                <p className="text-xs text-text-dim capitalize">
+                <p className="label-mono capitalize">
                   {formatDayLabel(day).split(" ")[0]}
                 </p>
                 <p
-                  className={`text-lg font-semibold ${
-                    isToday(day) ? "text-accent" : "text-text"
+                  className={`font-display text-2xl leading-none mt-1 inline-block px-1.5 py-0.5 ${
+                    isToday(day) ? "bg-accent text-accent-ink" : "text-text"
                   }`}
                 >
                   {day.getDate()}
@@ -149,7 +150,7 @@ export default function CalendarioSemana({
               {hours.map((h) => (
                 <div
                   key={h}
-                  className="h-20 border-b border-line px-2 pt-1 text-right text-xs text-text-faint"
+                  className="h-20 border-b border-line px-2 pt-1 text-right font-mono-ui text-[10px] text-text-faint"
                 >
                   {String(h).padStart(2, "0")}:00
                 </div>
@@ -189,7 +190,6 @@ export default function CalendarioSemana({
                   const durationMin =
                     (end.getTime() - start.getTime()) / 60000;
                   const height = Math.max((durationMin / 60) * 80 - 4, 36);
-                  const color = session.trainer_color ?? "#6366f1";
                   const bookingId = myBookingSessionIds[session.id];
                   const isPast = end < now;
 
@@ -199,25 +199,31 @@ export default function CalendarioSemana({
                       style={{
                         top: `${startOffset + 2}px`,
                         height: `${height}px`,
-                        borderLeftColor: color,
-                        backgroundColor: color + "1a",
                       }}
-                      className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 overflow-hidden ${
-                        session.is_cancelled || isPast ? "opacity-45" : ""
-                      }`}
+                      className={`absolute left-1 right-1 border border-line border-l-[4px] border-l-text bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
+                        session.trainer_id
+                      )} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
                     >
-                      <p className="text-[11px] font-semibold truncate" style={{ color }}>
-                        {session.name}
+                      <p className="text-[11px] font-semibold truncate">
+                        <span className="bg-bg pr-1">
+                          {!isTrainer && bookingId && "✓ "}
+                          {session.name}
+                        </span>
                       </p>
-                      <p className="text-[10px] text-text-dim truncate">
-                        {formatTime(start)}–{formatTime(end)} · {session.trainer_name.split(" ")[0]}
+                      <p className="font-mono-ui text-[9.5px] text-text-dim truncate">
+                        <span className="bg-bg pr-1">
+                          {formatTime(start)}–{formatTime(end)} · {session.trainer_name.split(" ")[0]}
+                        </span>
                       </p>
                       {session.is_cancelled && (
-                        <p className="text-[10px] text-danger font-medium">Cancelada</p>
+                        <p className="text-[10px] font-medium uppercase tracking-wider line-through">
+                          <span className="bg-bg pr-1">Cancelada</span>
+                        </p>
                       )}
                       {!isTrainer && !session.is_cancelled && height > 55 && (
-                        <div className="mt-1 scale-90 origin-left">
+                        <div className="mt-1 flex justify-start">
                           <ReservaButton
+                            compact
                             sessionId={session.id}
                             bookingId={bookingId}
                             reserved={Boolean(bookingId)}
