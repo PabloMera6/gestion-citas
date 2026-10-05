@@ -4,9 +4,16 @@ import { getWeekDays } from "@/lib/date";
 import type {
   Profile,
   Group,
+  SessionMember,
   SessionWithAvailability,
   Booking,
 } from "@/lib/types/database";
+
+interface BookingRow {
+  session_id: string;
+  created_at: string;
+  client: { id: string; full_name: string; phone: string | null } | null;
+}
 
 export default async function CalendarioPage({
   searchParams,
@@ -54,6 +61,27 @@ export default async function CalendarioPage({
     myBookingSessionIds[b.session_id] = b.id;
   });
 
+  const membersBySession: Record<string, SessionMember[]> = {};
+  if (isTrainer && (sessions ?? []).length > 0) {
+    const { data: rows } = await supabase
+      .from("bookings")
+      .select("session_id, created_at, client:profiles(id, full_name, phone)")
+      .in("session_id", (sessions ?? []).map((s) => s.id))
+      .eq("status", "confirmed")
+      .order("created_at")
+      .returns<BookingRow[]>();
+    for (const row of rows ?? []) {
+      if (!row.client) continue;
+      (membersBySession[row.session_id] ??= []).push({
+        id: row.client.id,
+        full_name: row.client.full_name,
+        phone: row.client.phone,
+        class_credits: null,
+        booked_at: row.created_at,
+      });
+    }
+  }
+
   const { data: groups } = await supabase
     .from("groups")
     .select("*")
@@ -68,6 +96,7 @@ export default async function CalendarioPage({
       isTrainer={isTrainer}
       groups={groups ?? []}
       currentUserId={user.id}
+      membersBySession={membersBySession}
     />
   );
 }

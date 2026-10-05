@@ -27,7 +27,7 @@ export async function PATCH(request: Request) {
   const update: Record<string, string | null> = {};
   if (body.fullName !== undefined) update.full_name = body.fullName.trim();
   if (body.phone !== undefined) update.phone = body.phone.trim() || null;
-  if (body.color !== undefined) update.color = body.color;
+  if (body.color !== undefined && /^#[0-9a-fA-F]{6}$/.test(body.color)) update.color = body.color;
   if (body.bio !== undefined) update.bio = body.bio.trim() || null;
 
   if (Object.keys(update).length === 0) {

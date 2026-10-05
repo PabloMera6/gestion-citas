@@ -84,9 +84,13 @@ export default function DetalleClaseModal({
                   </span>
                 )}
               </div>
+              <p className="label-mono mb-1">Reserva · {formatTime(start)}</p>
               <h2 className="font-display text-3xl leading-none break-words">
-                {session.name}
+                {members.length > 0
+                  ? members.map((m) => m.full_name).join(" · ")
+                  : "Sin cliente reservado"}
               </h2>
+              <p className="text-xs text-text-dim mt-1">{session.name}</p>
             </div>
             <button
               onClick={onClose}
@@ -111,6 +115,17 @@ export default function DetalleClaseModal({
                 {formatTime(start)} – {formatTime(end)}
               </span>{" "}
               <span className="text-text-dim">({durationMin} min)</span>
+            </Row>
+            <Row label="Modalidad">
+              {session.training_modality === "individual"
+                ? "Individual"
+                : session.training_modality === "duo"
+                ? "Dúo"
+                : session.training_modality === "group3"
+                ? "Grupal · 3 personas"
+                : session.training_modality === "group4"
+                ? "Grupal · 4 personas"
+                : `Grupal · ${session.max_capacity} personas`}
             </Row>
             <Row label="Entrenador">
               <span className="flex items-center gap-2">

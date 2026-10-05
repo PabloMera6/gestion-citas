@@ -115,12 +115,19 @@ export default function EntrenadorHorario({
                                 {formatTime(new Date(s.starts_at))}
                               </p>
                               <p
-                                className={`text-[10px] text-text-dim truncate ${
+                                className={`text-[10px] font-semibold truncate ${
                                   s.is_cancelled ? "line-through" : ""
                                 }`}
                               >
-                                {s.name}
+                                {canViewDetail
+                                  ? (membersBySession[s.id] ?? []).map((m) => m.full_name).join(", ") || "Sin reservas"
+                                  : s.name}
                               </p>
+                              {canViewDetail && (
+                                <p className="text-[9px] text-text-faint truncate">
+                                  {s.training_modality === "individual" ? "Individual" : s.training_modality === "duo" ? "Dúo" : s.training_modality === "group3" ? "Grupo 3" : s.training_modality === "group4" ? "Grupo 4" : `Grupo ${s.max_capacity}`}
+                                </p>
+                              )}
                               {canViewDetail && (
                                 <p className="label-mono !text-[8.5px] mt-0.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
                                   Ver detalle →

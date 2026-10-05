@@ -47,6 +47,19 @@ alter default privileges in schema public
 -- ---------------------------------------------------------
 create type user_role as enum ('trainer', 'client');
 
+create type training_modality as enum (
+  'individual',
+  'duo',
+  'group3',
+  'group4',
+  'custom_group'
+);
+
+create type booking_status as enum (
+  'confirmed',
+  'cancelled'
+);
+
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
@@ -64,13 +77,30 @@ returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  v_role user_role;
+  v_color text;
 begin
-  insert into public.profiles (id, full_name, role)
+  v_role := coalesce((new.raw_user_meta_data->>'role')::user_role, 'client');
+  v_color := case (
+    select count(*) from public.profiles where role = 'trainer'
+  ) % 6
+    when 0 then '#2563eb'
+    when 1 then '#16a34a'
+    when 2 then '#eab308'
+    when 3 then '#dc2626'
+    when 4 then '#7c3aed'
+    else '#0891b2'
+  end;
+  insert into public.profiles (id, full_name, role, color)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', 'Sin nombre'),
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'client')
+    v_role,
+    v_color
   );
+  insert into public.member_details (member_id) values (new.id)
+  on conflict (member_id) do nothing;
   return new;
 end;
 $$;
@@ -131,6 +161,7 @@ create table public.class_sessions (
   name text not null,               -- copiado de classes.name o puesto a mano si es suelta
   description text,
   max_capacity int not null check (max_capacity > 0),
+  training_modality training_modality not null default 'individual',
   starts_at timestamptz not null,
   ends_at timestamptz not null check (ends_at > starts_at),
   is_cancelled boolean not null default false,
@@ -143,7 +174,6 @@ create index idx_class_sessions_trainer on public.class_sessions(trainer_id);
 -- ---------------------------------------------------------
 -- 5. BOOKINGS (reservas de clientes a sesiones)
 -- ---------------------------------------------------------
-create type booking_status as enum ('confirmed', 'cancelled');
 
 create table public.bookings (
   id uuid primary key default gen_random_uuid(),
@@ -183,23 +213,39 @@ create index idx_announcements_created on public.announcements(created_at desc);
 -- =========================================================
 
 -- Comprobar aforo disponible antes de insertar una reserva
-create function public.check_capacity()
+create or replace function public.check_capacity()
 returns trigger
 language plpgsql
 as $$
 declare
   v_capacity int;
   v_taken int;
+  v_modality training_modality;
 begin
-  select max_capacity into v_capacity
-  from public.class_sessions where id = new.session_id;
+  select max_capacity, training_modality
+  into v_capacity, v_modality
+  from public.class_sessions
+  where id = new.session_id;
+
+  if v_capacity is null then
+    raise exception 'La sesión no existe';
+  end if;
 
   select count(*) into v_taken
   from public.bookings
-  where session_id = new.session_id and status = 'confirmed';
+  where session_id = new.session_id
+    and status = 'confirmed';
 
   if v_taken >= v_capacity then
     raise exception 'La clase está completa (aforo: %)', v_capacity;
+  end if;
+
+  if v_modality = 'individual' and v_capacity <> 1
+    or v_modality = 'duo' and v_capacity <> 2
+    or v_modality = 'group3' and v_capacity <> 3
+    or v_modality = 'group4' and v_capacity <> 4
+    or v_modality = 'custom_group' and v_capacity < 5 then
+    raise exception 'El aforo no coincide con la modalidad de entrenamiento';
   end if;
 
   return new;
@@ -241,6 +287,63 @@ create trigger trg_check_cancellation
   for each row
   execute procedure public.check_cancellation_window();
 
+
+-- ---------------------------------------------------------
+-- CONSUMO AUTOMÁTICO DE BONOS
+-- Una reserva consume 1 sesión; una cancelación válida la devuelve.
+-- ---------------------------------------------------------
+create function public.sync_booking_credit()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_balance int;
+begin
+  if tg_op = 'INSERT' and new.status = 'confirmed' then
+    insert into public.member_details (member_id) values (new.client_id)
+    on conflict (member_id) do nothing;
+    select class_credits into v_balance from public.member_details
+      where member_id = new.client_id for update;
+    if v_balance < 1 then
+      raise exception 'No tienes bonos disponibles para reservar esta sesión';
+    end if;
+    update public.member_details set class_credits = class_credits - 1, updated_at = now()
+      where member_id = new.client_id;
+    insert into public.class_credit_movements(member_id, trainer_id, delta, balance_after, reason)
+      select new.client_id, s.trainer_id, -1, v_balance - 1, 'Reserva de sesión'
+      from public.class_sessions s where s.id = new.session_id;
+  elsif tg_op = 'UPDATE' and old.status = 'confirmed' and new.status = 'cancelled' then
+    insert into public.member_details (member_id) values (new.client_id)
+    on conflict (member_id) do nothing;
+    select class_credits into v_balance from public.member_details
+      where member_id = new.client_id for update;
+    update public.member_details set class_credits = class_credits + 1, updated_at = now()
+      where member_id = new.client_id;
+    insert into public.class_credit_movements(member_id, trainer_id, delta, balance_after, reason)
+      select new.client_id, s.trainer_id, 1, v_balance + 1, 'Devolución por cancelación'
+      from public.class_sessions s where s.id = new.session_id;
+  elsif tg_op = 'UPDATE' and old.status = 'cancelled' and new.status = 'confirmed' then
+    insert into public.member_details (member_id) values (new.client_id)
+    on conflict (member_id) do nothing;
+    select class_credits into v_balance from public.member_details
+      where member_id = new.client_id for update;
+    if v_balance < 1 then
+      raise exception 'No tienes bonos disponibles para reactivar esta reserva';
+    end if;
+    update public.member_details set class_credits = class_credits - 1, updated_at = now()
+      where member_id = new.client_id;
+    insert into public.class_credit_movements(member_id, trainer_id, delta, balance_after, reason)
+      select new.client_id, s.trainer_id, -1, v_balance - 1, 'Reactivación de reserva'
+      from public.class_sessions s where s.id = new.session_id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_sync_booking_credit
+  after insert or update of status on public.bookings
+  for each row execute procedure public.sync_booking_credit();
 
 -- =========================================================
 -- ROW LEVEL SECURITY (RLS)

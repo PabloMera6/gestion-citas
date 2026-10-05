@@ -9,6 +9,7 @@ export default function EditarPerfilForm({ profile }: { profile: Profile }) {
   const [fullName, setFullName] = useState(profile.full_name);
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
+  const [color, setColor] = useState(profile.color);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -32,6 +33,7 @@ export default function EditarPerfilForm({ profile }: { profile: Profile }) {
           fullName,
           phone,
           bio,
+          color,
         }),
       });
       const data = await response.json();
@@ -78,9 +80,20 @@ export default function EditarPerfilForm({ profile }: { profile: Profile }) {
       {profile.role === "trainer" && (
         <>
           <div>
-            <label className="label-mono block mb-1.5">
-              Bio / especialidad
-            </label>
+            <label className="label-mono block mb-1.5">Color del entrenador</label>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {["#2563eb", "#16a34a", "#eab308", "#dc2626", "#7c3aed", "#0891b2"].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-label={`Seleccionar color ${c}`}
+                  onClick={() => setColor(c)}
+                  className={`w-9 h-9 rounded-full border-2 ${color === c ? "border-text scale-110" : "border-line"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+            <label className="label-mono block mb-1.5">Bio / especialidad</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}

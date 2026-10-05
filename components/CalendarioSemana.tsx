@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ReservaButton from "./ReservaButton";
 import { trainerPatternClass } from "@/lib/pattern";
 import CrearClaseModal from "./CrearClaseModal";
+import DetalleClaseModal from "./DetalleClaseModal";
+import type { Profile } from "@/lib/types/database";
 import {
   getWeekDays,
   formatDayLabel,
@@ -13,7 +15,7 @@ import {
   isSameDay,
   isToday,
 } from "@/lib/date";
-import type { Group, SessionWithAvailability } from "@/lib/types/database";
+import type { Group, SessionMember, SessionWithAvailability } from "@/lib/types/database";
 
 type Props = {
   weekStartIso: string; // fecha de referencia (ISO) para calcular la semana
@@ -22,6 +24,7 @@ type Props = {
   isTrainer: boolean;
   groups: Group[];
   currentUserId: string;
+  membersBySession: Record<string, SessionMember[]>;
 };
 
 const START_HOUR = 7;
@@ -34,15 +37,18 @@ export default function CalendarioSemana({
   isTrainer,
   groups,
   currentUserId,
+  membersBySession,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillSlot, setPrefillSlot] = useState<Date | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const reference = new Date(weekStartIso);
   const days = useMemo(() => getWeekDays(reference), [weekStartIso]);
   const now = new Date();
+  const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null;
 
   function goToWeek(delta: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -196,18 +202,22 @@ export default function CalendarioSemana({
                   return (
                     <div
                       key={session.id}
-                      style={{
-                        top: `${startOffset + 2}px`,
-                        height: `${height}px`,
+                      onClick={() => {
+                        if (isTrainer) {
+                          setSelectedSessionId(session.id);
+                        }
                       }}
-                      className={`absolute left-1 right-1 border border-line border-l-[4px] border-l-text bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
+                      style={{ top: `${startOffset + 2}px`, height: `${height}px`, borderLeftColor: session.trainer_color || "#6366f1" }}
+                      className={`absolute left-1 right-1 border border-line border-l-[4px] bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
                         session.trainer_id
-                      )} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
+                      )} ${isTrainer ? "cursor-pointer hover:border-text" : ""} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
                     >
                       <p className="text-[11px] font-semibold truncate">
                         <span className="bg-bg pr-1">
                           {!isTrainer && bookingId && "✓ "}
-                          {session.name}
+                          {isTrainer
+                            ? (membersBySession[session.id] ?? []).map((m) => m.full_name).join(", ") || "Sin reservas"
+                            : session.name}
                         </span>
                       </p>
                       <p className="font-mono-ui text-[9.5px] text-text-dim truncate">
@@ -215,6 +225,11 @@ export default function CalendarioSemana({
                           {formatTime(start)}–{formatTime(end)} · {session.trainer_name.split(" ")[0]}
                         </span>
                       </p>
+                      {isTrainer && (
+                        <p className="text-[9px] text-text-faint truncate">
+                          <span className="bg-bg pr-1">{session.training_modality === "individual" ? "Individual" : session.training_modality === "duo" ? "Dúo" : session.training_modality === "group3" ? "Grupo 3" : session.training_modality === "group4" ? "Grupo 4" : `Grupo ${session.max_capacity}`}</span>
+                        </p>
+                      )}
                       {session.is_cancelled && (
                         <p className="text-[10px] font-medium uppercase tracking-wider line-through">
                           <span className="bg-bg pr-1">Cancelada</span>
@@ -243,11 +258,41 @@ export default function CalendarioSemana({
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-2 items-center">
+        <span className="label-mono mr-1">Entrenadores</span>
+        {Array.from(new Map(sessions.map((s) => [s.trainer_id, s])).values()).map((s) => (
+          <span key={s.trainer_id} className="inline-flex items-center gap-1.5 text-xs text-text-dim">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.trainer_color }} />
+            {s.trainer_name}
+          </span>
+        ))}
+      </div>
+
       <p className="mt-3 text-xs text-text-faint">
         {isTrainer
           ? "Toca una franja horaria vacía para crear una clase."
           : "Toca 'Reservar plaza' en una clase para apuntarte."}
       </p>
+
+
+
+      {selectedSession && isTrainer && (
+        <DetalleClaseModal
+          session={selectedSession}
+          trainer={{
+            id: selectedSession.trainer_id,
+            full_name: selectedSession.trainer_name,
+            role: "trainer",
+            phone: null,
+            avatar_url: null,
+            color: selectedSession.trainer_color,
+            bio: null,
+            created_at: "",
+          } as Profile}
+          members={membersBySession[selectedSession.id] ?? []}
+          onClose={() => setSelectedSessionId(null)}
+        />
+      )}
 
       {isTrainer && (
         <CrearClaseModal

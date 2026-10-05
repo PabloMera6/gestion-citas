@@ -79,10 +79,8 @@ export default function NavBar({ profile }: { profile: Profile }) {
       <aside className="hidden sm:flex sm:flex-col sm:w-60 sm:shrink-0 sm:h-screen sm:sticky sm:top-0 border-r border-line bg-bg-raised/40 px-4 py-6">
         <div className="px-2 mb-8">
           <div className="flex items-center gap-2.5">
-            <span className="w-9 h-9 bg-accent flex items-center justify-center text-accent-ink font-display text-xl leading-none">
-              M
-            </span>
-            <span className="font-display text-2xl leading-none">MiGym</span>
+            <img src="/Bibelo.jpg" alt="Bíbelo" className="h-10 w-auto max-w-36 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            <span className="font-display text-2xl leading-none">Bíbelo</span>
           </div>
           <div className="hazard h-1.5 mt-4 opacity-90" aria-hidden />
         </div>
@@ -138,10 +136,8 @@ export default function NavBar({ profile }: { profile: Profile }) {
       <div className="sm:hidden">
         <div className="flex items-center justify-between h-14 px-4 border-b border-line bg-bg-raised/60 backdrop-blur">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 bg-accent flex items-center justify-center text-accent-ink font-display text-base leading-none">
-              M
-            </span>
-            <span className="font-display text-xl leading-none">MiGym</span>
+            <img src="/Bibelo.jpg" alt="Bíbelo" className="h-8 w-auto max-w-28 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            <span className="font-display text-xl leading-none">Bíbelo</span>
           </div>
           <button onClick={handleLogout} className="label-mono hover:text-text">
             Salir

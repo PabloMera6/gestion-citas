@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile } from "@/lib/types/database";
+import type { Profile, TrainingModality } from "@/lib/types/database";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     startsAt?: string;
     endsAt?: string;
     groupId?: string | null;
+    trainingModality?: TrainingModality;
   };
 
   try {
@@ -41,7 +42,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Petición inválida." }, { status: 400 });
   }
 
-  const { name, description, maxCapacity, startsAt, endsAt, groupId } = body;
+  const { name, description, maxCapacity, startsAt, endsAt, groupId, trainingModality = "individual" } = body;
+
+  const capacityRules: Record<TrainingModality, { min: number; max?: number }> = {
+    individual: { min: 1, max: 1 },
+    duo: { min: 2, max: 2 },
+    group3: { min: 3, max: 3 },
+    group4: { min: 4, max: 4 },
+    custom_group: { min: 5 },
+  };
+  const rule = capacityRules[trainingModality];
+  if (!rule || maxCapacity < rule.min || (rule.max && maxCapacity !== rule.max)) {
+    return NextResponse.json({ error: "El aforo no coincide con la modalidad seleccionada." }, { status: 400 });
+  }
 
   if (!name || !maxCapacity || !startsAt || !endsAt) {
     return NextResponse.json(
@@ -64,6 +77,7 @@ export async function POST(request: Request) {
       name,
       description: description ?? null,
       max_capacity: maxCapacity,
+      training_modality: trainingModality,
       starts_at: startsAt,
       ends_at: endsAt,
       group_id: groupId ?? null,

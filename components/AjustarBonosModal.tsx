@@ -9,7 +9,7 @@ type Props = {
   onChanged: (memberId: string, credits: number) => void;
 };
 
-const QUICK = [1, 5, 10];
+const QUICK = [4, 8, 12];
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString("es-ES", {
@@ -132,7 +132,7 @@ export default function AjustarBonosModal({ member, onClose, onChanged }: Props)
 
           <div>
             <label className="label-mono block mb-1.5" htmlFor="bonos-amount">
-              Cantidad
+              Activar bono de sesiones
             </label>
             <div className="flex gap-2">
               <input
@@ -166,7 +166,7 @@ export default function AjustarBonosModal({ member, onClose, onChanged }: Props)
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
-              placeholder="Pago de bono de 10 clases, regalo, corrección…"
+              placeholder="Pago de bono de 4, 8, 12 sesiones o bono personalizado…"
               className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:border-text"
             />
           </div>

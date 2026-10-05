@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Group } from "@/lib/types/database";
+import { TRAINING_MODALITIES, type Group, type TrainingModality } from "@/lib/types/database";
 
 type Props = {
   open: boolean;
@@ -28,7 +28,8 @@ export default function CrearClaseModal({
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [maxCapacity, setMaxCapacity] = useState(10);
+  const [modality, setModality] = useState<TrainingModality>("individual");
+  const [maxCapacity, setMaxCapacity] = useState(1);
   const [duration, setDuration] = useState(60);
   const [startsAt, setStartsAt] = useState("");
   const [groupId, setGroupId] = useState<string>("");
@@ -41,7 +42,8 @@ export default function CrearClaseModal({
       setStartsAt(toLocalInputValue(base));
       setName("");
       setDescription("");
-      setMaxCapacity(10);
+      setModality("individual");
+      setMaxCapacity(1);
       setDuration(60);
       setGroupId("");
       setError(null);
@@ -74,6 +76,7 @@ export default function CrearClaseModal({
           startsAt: start.toISOString(),
           endsAt: end.toISOString(),
           groupId: groupId || null,
+          trainingModality: modality,
         }),
       });
       const data = await response.json();
@@ -166,6 +169,25 @@ export default function CrearClaseModal({
             </div>
           </div>
 
+          <div>
+            <label className="label-mono block mb-1.5">Modalidad de entrenamiento</label>
+            <select
+              value={modality}
+              onChange={(e) => {
+                const next = e.target.value as TrainingModality;
+                setModality(next);
+                const preset = TRAINING_MODALITIES.find((m) => m.value === next)?.defaultCapacity;
+                if (preset) setMaxCapacity(preset);
+                else setMaxCapacity((current) => Math.max(5, current));
+              }}
+              className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              {TRAINING_MODALITIES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label-mono block mb-1.5">
@@ -173,7 +195,8 @@ export default function CrearClaseModal({
               </label>
               <input
                 type="number"
-                min={1}
+                min={modality === "custom_group" ? 5 : maxCapacity}
+                max={modality === "custom_group" ? undefined : maxCapacity}
                 value={maxCapacity}
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
                 className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
