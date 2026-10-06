@@ -37,11 +37,8 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
-      <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-        <span className="w-9 h-9 bg-accent flex items-center justify-center text-accent-ink font-display text-xl leading-none">
-          M
-        </span>
-        <span className="font-display text-2xl leading-none">MiGym</span>
+      <div className="mb-10 lg:hidden">
+        <img src="/Bibelo.jpg" alt="Bíbelo" className="h-10 w-auto max-w-40 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
       </div>
 
       <p className="label-mono mb-3">01 — Acceso</p>

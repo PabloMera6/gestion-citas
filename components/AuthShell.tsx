@@ -28,31 +28,18 @@ export default function AuthShell({ children }: { children: ReactNode }) {
       {/* Panel de marca */}
       <aside className="hidden lg:flex flex-col justify-between border-r border-text px-12 py-10 relative overflow-hidden">
         <div className="flex items-center gap-3">
-          <span className="w-10 h-10 bg-accent text-accent-ink font-display text-2xl flex items-center justify-center leading-none">
-            M
-          </span>
-          <span className="label-mono">Est. 2026 · Club de entrenamiento</span>
+          <img src="/Bibelo.jpg" alt="Bíbelo" className="h-10 w-auto max-w-40 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         </div>
 
         <div className="relative">
-          <p
-            className="font-display leading-[0.82] select-none"
-            style={{
-              fontSize: "clamp(7rem, 15vw, 15rem)",
-              WebkitTextStroke: "2px var(--text)",
-              color: "transparent",
-            }}
+          <img
+            src="/Bibelo.jpg"
+            alt=""
+            className="w-full max-w-md object-contain select-none"
             aria-hidden
-          >
-            MI
-          </p>
-          <p
-            className="font-display leading-[0.82] select-none"
-            style={{ fontSize: "clamp(7rem, 15vw, 15rem)" }}
-            aria-hidden
-          >
-            GYM
-          </p>
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+          <p className="label-mono mt-3">Est. 2026 · Club de entrenamiento</p>
           <div className="hazard h-3 w-48 mt-6" aria-hidden />
         </div>
 

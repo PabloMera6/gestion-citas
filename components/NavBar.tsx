@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types/database";
 import { initialsOf } from "@/lib/pattern";
-import type { ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
+
+const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
 const ICONS: Record<string, ReactElement> = {
   calendario: (
@@ -55,6 +57,23 @@ export default function NavBar({ profile }: { profile: Profile }) {
 
   const isTrainer = profile.role === "trainer";
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    if (stored === "1") setCollapsed(true);
+    setHydrated(true);
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
   const links = [
     { href: "/calendario", label: "Calendario", key: "calendario" },
     { href: "/tablon", label: "Tablón", key: "tablon" },
@@ -76,14 +95,35 @@ export default function NavBar({ profile }: { profile: Profile }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="hidden sm:flex sm:flex-col sm:w-60 sm:shrink-0 sm:h-screen sm:sticky sm:top-0 border-r border-line bg-bg-raised/40 px-4 py-6">
-        <div className="px-2 mb-8">
-          <div className="flex items-center gap-2.5">
-            <img src="/Bibelo.jpg" alt="Bíbelo" className="h-10 w-auto max-w-36 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-            <span className="font-display text-2xl leading-none">Bíbelo</span>
-          </div>
-          <div className="hazard h-1.5 mt-4 opacity-90" aria-hidden />
+      <aside
+        className={`hidden sm:flex sm:flex-col sm:shrink-0 sm:h-screen sm:sticky sm:top-0 border-r border-line bg-bg-raised/40 py-6 ${
+          hydrated ? "transition-[width] duration-200" : ""
+        } ${collapsed ? "sm:w-[68px] sm:px-2" : "sm:w-60 sm:px-4"}`}
+      >
+        <div className={`mb-8 flex items-center ${collapsed ? "flex-col gap-3 px-0" : "justify-between px-2"}`}>
+          {collapsed ? (
+            <span className="w-8 h-8 rounded bg-bg-raised-hover flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
+              <img src="/Bibelo.jpg" alt="Bíbelo" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            </span>
+          ) : (
+            <img src="/Bibelo.jpg" alt="Bíbelo" className="h-10 w-auto max-w-40 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          )}
+          <button
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Mostrar menú" : "Ocultar menú"}
+            title={collapsed ? "Mostrar menú" : "Ocultar menú"}
+            className="text-text-dim hover:text-text p-1.5 rounded-md hover:bg-bg-raised-hover transition-colors shrink-0"
+          >
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" stroke="currentColor" className="w-4.5 h-4.5">
+              {collapsed ? (
+                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M15 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+            </svg>
+          </button>
         </div>
+        {!collapsed && <div className="hazard h-1.5 -mt-4 mb-4 mx-2 opacity-90" aria-hidden />}
 
         <nav className="flex flex-col gap-1">
           {links.map((link) => {
@@ -92,37 +132,47 @@ export default function NavBar({ profile }: { profile: Profile }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-3 px-3 py-2.5 text-xs font-medium uppercase tracking-[0.12em] transition-colors ${
+                title={collapsed ? link.label : undefined}
+                className={`relative flex items-center gap-3 py-2.5 text-xs font-medium uppercase tracking-[0.12em] transition-colors ${
+                  collapsed ? "justify-center px-0" : "px-3"
+                } ${
                   active
                     ? "bg-accent text-accent-ink"
                     : "text-text-dim hover:bg-bg-raised-hover hover:text-text"
                 }`}
               >
                 {ICONS[link.key]}
-                {link.label}
+                {!collapsed && link.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-line flex items-center gap-3 px-2">
-          <Link href="/perfil" className="flex items-center gap-3 min-w-0 flex-1 group">
+        <div className={`mt-auto pt-6 border-t border-line flex items-center gap-3 ${collapsed ? "flex-col px-0" : "px-2"}`}>
+          <Link
+            href="/perfil"
+            title={collapsed ? profile.full_name : undefined}
+            className={`flex items-center gap-3 min-w-0 group ${collapsed ? "" : "flex-1"}`}
+          >
             <span className="w-9 h-9 rounded-full border border-text flex items-center justify-center text-xs font-semibold shrink-0">
               {initials}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">
-                {profile.full_name}
-              </p>
-              <p className="label-mono">
-                {profile.role === "trainer" ? "Entrenador" : "Cliente"}
-              </p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">
+                  {profile.full_name}
+                </p>
+                <p className="label-mono">
+                  {profile.role === "trainer" ? "Entrenador" : "Cliente"}
+                </p>
+              </div>
+            )}
           </Link>
           <button
             onClick={handleLogout}
             aria-label="Cerrar sesión"
-            className="text-text-dim hover:text-text p-1.5 rounded-md hover:bg-bg-raised-hover transition-colors"
+            title="Cerrar sesión"
+            className="text-text-dim hover:text-text p-1.5 rounded-md hover:bg-bg-raised-hover transition-colors shrink-0"
           >
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" stroke="currentColor" className="w-4.5 h-4.5">
               <path d="M15.5 8V6.5A2.5 2.5 0 0013 4H6.5A2.5 2.5 0 004 6.5v11A2.5 2.5 0 006.5 20H13a2.5 2.5 0 002.5-2.5V16" strokeLinecap="round" />
@@ -135,10 +185,7 @@ export default function NavBar({ profile }: { profile: Profile }) {
       {/* Barra superior + inferior móvil */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between h-14 px-4 border-b border-line bg-bg-raised/60 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <img src="/Bibelo.jpg" alt="Bíbelo" className="h-8 w-auto max-w-28 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-            <span className="font-display text-xl leading-none">Bíbelo</span>
-          </div>
+          <img src="/Bibelo.jpg" alt="Bíbelo" className="h-8 w-auto max-w-32 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
           <button onClick={handleLogout} className="label-mono hover:text-text">
             Salir
           </button>
