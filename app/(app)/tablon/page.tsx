@@ -1,7 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import NuevoAnuncioForm from "@/components/NuevoAnuncioForm";
 import { formatFullDate, formatTime } from "@/lib/date";
-import type { Profile } from "@/lib/types/database";
 
 interface AnnouncementRow {
   id: string;
@@ -13,19 +12,9 @@ interface AnnouncementRow {
 }
 
 export default async function TablonPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getAuthContext();
 
   if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
 
   const { data: announcements } = await supabase
     .from("announcements")

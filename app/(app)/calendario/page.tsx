@@ -1,8 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import CalendarioSemana from "@/components/CalendarioSemana";
 import { getWeekDays } from "@/lib/date";
 import type {
-  Profile,
   Group,
   SessionMember,
   SessionWithAvailability,
@@ -26,41 +25,39 @@ export default async function CalendarioPage({
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getAuthContext();
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
-
   const isTrainer = profile?.role === "trainer";
 
-  const { data: sessions } = await supabase
-    .from("sessions_with_availability")
-    .select("*")
-    .gte("starts_at", weekStart.toISOString())
-    .lt("starts_at", weekEnd.toISOString())
-    .order("starts_at");
-
-  const { data: myBookings } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("status", "confirmed")
-    .returns<Booking[]>();
+  // sessions, myBookings y groups no dependen entre sí: se lanzan en
+  // paralelo en vez de esperar uno a otro en serie.
+  const [{ data: sessions }, { data: myBookings }, { data: groups }] =
+    await Promise.all([
+      supabase
+        .from("sessions_with_availability")
+        .select("*")
+        .gte("starts_at", weekStart.toISOString())
+        .lt("starts_at", weekEnd.toISOString())
+        .order("starts_at"),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("client_id", user.id)
+        .eq("status", "confirmed")
+        .returns<Booking[]>(),
+      supabase.from("groups").select("*").eq("trainer_id", user.id).returns<Group[]>(),
+    ]);
 
   const myBookingSessionIds: Record<string, string> = {};
   (myBookings ?? []).forEach((b) => {
     myBookingSessionIds[b.session_id] = b.id;
   });
 
+  // Esta sí depende del resultado de "sessions", así que tiene que ir
+  // después, pero solo se lanza cuando hace falta (entrenador con
+  // sesiones esa semana).
   const membersBySession: Record<string, SessionMember[]> = {};
   if (isTrainer && (sessions ?? []).length > 0) {
     const { data: rows } = await supabase
@@ -81,12 +78,6 @@ export default async function CalendarioPage({
       });
     }
   }
-
-  const { data: groups } = await supabase
-    .from("groups")
-    .select("*")
-    .eq("trainer_id", user.id)
-    .returns<Group[]>();
 
   return (
     <CalendarioSemana

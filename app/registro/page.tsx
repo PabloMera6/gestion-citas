@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
+import PasswordStrengthHint from "@/components/PasswordStrengthHint";
+import { isPasswordValid, passwordErrorMessage } from "@/lib/password";
 
 export default function RegistroPage() {
-  const router = useRouter();
   const supabase = createClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,6 +20,12 @@ export default function RegistroPage() {
     e.preventDefault();
     setError(null);
 
+    const passwordError = passwordErrorMessage(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
@@ -29,29 +35,37 @@ export default function RegistroPage() {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(
+        error.message === "User already registered"
+          ? "Ya existe una cuenta con este email. Prueba a entrar."
+          : error.message
+      );
       return;
     }
 
     setSuccess(true);
-    setTimeout(() => router.push("/login"), 2000);
   }
 
   if (success) {
     return (
       <AuthShell>
         <span className="inline-flex w-14 h-14 bg-accent items-center justify-center text-accent-ink font-display text-3xl mb-5">
-          ✓
+          ✉️
         </span>
-        <h1 className="mb-4">¡Cuenta creada!</h1>
+        <h1 className="mb-4">Revisa tu correo</h1>
         <p className="text-text-dim mt-5 text-sm">
-          Revisa tu email si se requiere confirmación. Te llevamos a login…
+          Te hemos enviado un enlace de confirmación a <strong className="text-text">{email}</strong>.
+          Ábrelo para activar tu cuenta y poder entrar.
+        </p>
+        <p className="text-text-dim mt-4 text-sm">
+          ¿No lo ves? Revisa también la carpeta de spam o promociones.
         </p>
       </AuthShell>
     );
@@ -100,12 +114,13 @@ export default function RegistroPage() {
           <input
             type="password"
             required
-            minLength={6}
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={inputCls}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres, letra y número"
           />
+          <PasswordStrengthHint password={password} />
         </div>
 
         {error && (
@@ -114,7 +129,7 @@ export default function RegistroPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !isPasswordValid(password)}
           className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50"
         >
           {loading ? "Creando cuenta…" : "Crear cuenta"}

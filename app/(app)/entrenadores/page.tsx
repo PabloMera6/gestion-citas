@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import EntrenadorHorario from "@/components/EntrenadorHorario";
 import { getWeekDays } from "@/lib/date";
 import type {
@@ -24,20 +24,11 @@ interface BookingRow {
 }
 
 export default async function EntrenadoresPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getAuthContext();
 
   if (!user) return null;
 
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single<{ role: Profile["role"] }>();
-  const isTrainer = me?.role === "trainer";
+  const isTrainer = profile?.role === "trainer";
 
   const weekDays = getWeekDays(new Date());
   const weekStart = weekDays[0];

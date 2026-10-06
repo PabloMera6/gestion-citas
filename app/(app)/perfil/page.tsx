@@ -1,23 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import EditarPerfilForm from "@/components/EditarPerfilForm";
 import GestionGrupos from "@/components/GestionGrupos";
-import type { Group, MemberDetails, Profile } from "@/lib/types/database";
+import type { Group, MemberDetails } from "@/lib/types/database";
 
 export default async function PerfilPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getAuthContext();
 
   if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
-
   if (!profile) return null;
 
   let details: MemberDetails | null = null;

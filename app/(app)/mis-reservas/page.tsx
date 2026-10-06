@@ -1,15 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import ReservaButton from "@/components/ReservaButton";
 import { formatFullDate, formatTime } from "@/lib/date";
 import { trainerPatternClass } from "@/lib/pattern";
 import type { BookingWithSession } from "@/lib/types/database";
 
 export default async function MisReservasPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthContext();
 
   if (!user) return null;
 

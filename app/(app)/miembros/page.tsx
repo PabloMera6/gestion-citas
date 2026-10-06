@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import MiembrosTabla from "@/components/MiembrosTabla";
-import type { Member, Profile } from "@/lib/types/database";
+import type { Member } from "@/lib/types/database";
 
 interface MemberRow {
   id: string;
@@ -15,21 +15,11 @@ interface MemberRow {
 }
 
 export default async function MiembrosPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getAuthContext();
   if (!user) return null;
 
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single<Pick<Profile, "role">>();
-
   // Sección solo para entrenadores
-  if (me?.role !== "trainer") redirect("/calendario");
+  if (profile?.role !== "trainer") redirect("/calendario");
 
   const { data: rows, error } = await supabase
     .from("profiles")

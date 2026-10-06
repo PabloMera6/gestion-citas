@@ -1,28 +1,17 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import NavBar from "@/components/NavBar";
-import type { Profile } from "@/lib/types/database";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile, profileError } = await getAuthContext();
 
   if (!user) {
     redirect("/login");
   }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
 
   if (!profile) {
     // El usuario existe en auth.users pero no tiene fila en public.profiles.

@@ -122,6 +122,16 @@ export const TRAINER_COLORS = [
 // Debe coincidir con public.cancellation_limit_hours() en la base de datos.
 export const CANCELLATION_LIMIT_HOURS = 4;
 
+// Aforo máximo físico de un entrenamiento de grupo ("custom_group").
+// Debe coincidir con la constraint chk_group_max_capacity en la base de datos.
+export const MAX_GROUP_CAPACITY = 7;
+
+// Número máximo de entrenamientos que pueden solaparse en el mismo
+// tramo horario (límite de espacio/material del gimnasio), sea cual
+// sea su modalidad. Debe coincidir con public.max_concurrent_sessions()
+// en la base de datos.
+export const MAX_CONCURRENT_SESSIONS = 2;
+
 // ---------------------------------------------------------
 // Miembros y bonos de clases
 // ---------------------------------------------------------

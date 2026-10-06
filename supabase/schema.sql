@@ -173,6 +173,9 @@ create table public.class_sessions (
 
 create index idx_class_sessions_starts_at on public.class_sessions(starts_at);
 create index idx_class_sessions_trainer on public.class_sessions(trainer_id);
+-- Acelera la búsqueda de solapamientos (starts_at < X and ends_at > Y)
+-- que hace trg_check_concurrent_sessions en cada inserción/edición.
+create index idx_class_sessions_range on public.class_sessions(starts_at, ends_at) where not is_cancelled;
 
 -- ---------------------------------------------------------
 -- 5. BOOKINGS (reservas de clientes a sesiones)
@@ -195,6 +198,17 @@ create index idx_bookings_client on public.bookings(client_id);
 -- (constante fácil de cambiar en un solo sitio)
 create function public.cancellation_limit_hours()
 returns int language sql immutable as $$ select 4 $$;
+
+-- Aforo máximo físico de un entrenamiento de grupo ("custom_group").
+-- Debe coincidir con MAX_GROUP_CAPACITY en lib/types/database.ts.
+create function public.max_group_capacity()
+returns int language sql immutable as $$ select 7 $$;
+
+-- Número máximo de entrenamientos que pueden solaparse en el mismo
+-- tramo horario (límite de espacio/material del gimnasio).
+-- Debe coincidir con MAX_CONCURRENT_SESSIONS en lib/types/database.ts.
+create function public.max_concurrent_sessions()
+returns int language sql immutable as $$ select 2 $$;
 
 -- ---------------------------------------------------------
 -- 6. ANNOUNCEMENTS (el "tablón")
@@ -247,7 +261,7 @@ begin
     or v_modality = 'duo' and v_capacity <> 2
     or v_modality = 'group3' and v_capacity <> 3
     or v_modality = 'group4' and v_capacity <> 4
-    or v_modality = 'custom_group' and v_capacity < 5 then
+    or v_modality = 'custom_group' and (v_capacity < 5 or v_capacity > public.max_group_capacity()) then
     raise exception 'El aforo no coincide con la modalidad de entrenamiento';
   end if;
 
@@ -260,6 +274,45 @@ create trigger trg_check_capacity
   for each row
   when (new.status = 'confirmed')
   execute procedure public.check_capacity();
+
+
+-- Comprobar que no se superan los entrenamientos simultáneos permitidos.
+-- El gimnasio solo tiene espacio/material para max_concurrent_sessions()
+-- a la vez, sea cual sea la modalidad. Se aplica tanto al crear una
+-- sesión como al reprogramar su horario; las sesiones canceladas no
+-- cuentan. Esta comprobación vive también en app/api/sesiones/route.ts,
+-- pero se repite aquí como red de seguridad ante condiciones de carrera
+-- (dos creaciones casi simultáneas) o inserciones que no pasen por el API.
+create or replace function public.check_concurrent_sessions()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_overlapping int;
+begin
+  if new.is_cancelled then
+    return new;
+  end if;
+
+  select count(*) into v_overlapping
+  from public.class_sessions s
+  where not s.is_cancelled
+    and s.id <> new.id
+    and s.starts_at < new.ends_at
+    and s.ends_at > new.starts_at;
+
+  if v_overlapping >= public.max_concurrent_sessions() then
+    raise exception 'Ya hay % entrenamientos en ese horario; el gimnasio no puede atender más a la vez', public.max_concurrent_sessions();
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_check_concurrent_sessions
+  before insert or update of starts_at, ends_at, is_cancelled on public.class_sessions
+  for each row
+  execute procedure public.check_concurrent_sessions();
 
 
 -- Comprobar límite de cancelación

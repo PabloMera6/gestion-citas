@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TRAINING_MODALITIES, type Group, type TrainingModality } from "@/lib/types/database";
+import { TRAINING_MODALITIES, MAX_GROUP_CAPACITY, type Group, type TrainingModality } from "@/lib/types/database";
 
 type Props = {
   open: boolean;
@@ -196,11 +196,20 @@ export default function CrearClaseModal({
               <input
                 type="number"
                 min={modality === "custom_group" ? 5 : maxCapacity}
-                max={modality === "custom_group" ? undefined : maxCapacity}
+                max={modality === "custom_group" ? MAX_GROUP_CAPACITY : maxCapacity}
                 value={maxCapacity}
-                onChange={(e) => setMaxCapacity(Number(e.target.value))}
+                onChange={(e) =>
+                  setMaxCapacity(
+                    modality === "custom_group"
+                      ? Math.min(MAX_GROUP_CAPACITY, Number(e.target.value))
+                      : Number(e.target.value)
+                  )
+                }
                 className="w-full border border-line bg-bg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
+              {modality === "custom_group" && (
+                <p className="text-xs text-text-dim mt-1">Máximo {MAX_GROUP_CAPACITY} personas.</p>
+              )}
             </div>
             <div>
               <label className="label-mono block mb-1.5">

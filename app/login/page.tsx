@@ -1,22 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(searchParams.get("error"));
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setUnconfirmedEmail(null);
+    setResent(false);
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -27,12 +33,29 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      setError("Email o contraseña incorrectos.");
+      if (error.message === "Email not confirmed") {
+        setError("Todavía no has confirmado tu email.");
+        setUnconfirmedEmail(email);
+      } else {
+        setError("Email o contraseña incorrectos.");
+      }
       return;
     }
 
     router.push("/calendario");
     router.refresh();
+  }
+
+  async function handleResendConfirmation() {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    await supabase.auth.resend({
+      type: "signup",
+      email: unconfirmedEmail,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setResending(false);
+    setResent(true);
   }
 
   return (
@@ -59,7 +82,12 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="label-mono block mb-1.5">Contraseña</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="label-mono">Contraseña</label>
+            <Link href="/recuperar-contrasena" className="text-xs text-text-dim hover:text-text underline underline-offset-4">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
           <input
             type="password"
             required
@@ -71,7 +99,20 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-danger bg-danger-bg px-3 py-2">{error}</p>
+          <div className="text-sm text-danger bg-danger-bg px-3 py-2 space-y-2">
+            <p>{error}</p>
+            {unconfirmedEmail && !resent && (
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={resending}
+                className="underline underline-offset-4 disabled:opacity-50"
+              >
+                {resending ? "Enviando…" : "Reenviar email de confirmación"}
+              </button>
+            )}
+            {resent && <p>Te hemos reenviado el email de confirmación.</p>}
+          </div>
         )}
 
         <button
@@ -90,5 +131,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
