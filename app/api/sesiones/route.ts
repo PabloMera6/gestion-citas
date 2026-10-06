@@ -44,6 +44,13 @@ export async function POST(request: Request) {
 
   const { name, description, maxCapacity, startsAt, endsAt, groupId, trainingModality = "individual" } = body;
 
+  if (!name || !maxCapacity || !startsAt || !endsAt) {
+    return NextResponse.json(
+      { error: "Faltan campos obligatorios." },
+      { status: 400 }
+    );
+  }
+
   const capacityRules: Record<TrainingModality, { min: number; max?: number }> = {
     individual: { min: 1, max: 1 },
     duo: { min: 2, max: 2 },
@@ -54,13 +61,6 @@ export async function POST(request: Request) {
   const rule = capacityRules[trainingModality];
   if (!rule || maxCapacity < rule.min || (rule.max && maxCapacity !== rule.max)) {
     return NextResponse.json({ error: "El aforo no coincide con la modalidad seleccionada." }, { status: 400 });
-  }
-
-  if (!name || !maxCapacity || !startsAt || !endsAt) {
-    return NextResponse.json(
-      { error: "Faltan campos obligatorios." },
-      { status: 400 }
-    );
   }
 
   if (new Date(endsAt) <= new Date(startsAt)) {
