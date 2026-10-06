@@ -12,7 +12,6 @@ export default function RegistroPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"client" | "trainer">("client");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -29,7 +28,6 @@ export default function RegistroPage() {
       options: {
         data: {
           full_name: fullName,
-          role,
         },
       },
     });
@@ -109,28 +107,6 @@ export default function RegistroPage() {
             placeholder="Mínimo 6 caracteres"
           />
         </div>
-
-        <div>
-          <label className="label-mono block mb-1.5">Soy…</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(["client", "trainer"] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRole(r)}
-                aria-pressed={role === r}
-                className={`border py-2.5 text-xs font-medium uppercase tracking-[0.12em] transition-colors ${
-                  role === r
-                    ? "border-text bg-text text-bg"
-                    : "border-line text-text-dim hover:text-text hover:border-text-faint"
-                }`}
-              >
-                {r === "client" ? "Cliente" : "Entrenador"}
-              </button>
-            ))}
-          </div>
-        </div>
-
 
         {error && (
           <p className="text-sm text-danger bg-danger-bg px-3 py-2">{error}</p>

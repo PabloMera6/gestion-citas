@@ -78,10 +78,13 @@ language plpgsql
 security definer set search_path = public
 as $$
 declare
-  v_role user_role;
   v_color text;
 begin
-  v_role := coalesce((new.raw_user_meta_data->>'role')::user_role, 'client');
+  -- El rol NUNCA se toma de raw_user_meta_data: ese campo lo rellena
+  -- el propio usuario al registrarse (o cualquiera que llame a la API
+  -- de signUp directamente), así que no es de fiar. Todo registro
+  -- público entra como 'client'; a entrenador se asciende a mano
+  -- (UPDATE profiles SET role = 'trainer' WHERE id = ...) desde Supabase.
   v_color := case (
     select count(*) from public.profiles where role = 'trainer'
   ) % 6
@@ -96,7 +99,7 @@ begin
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', 'Sin nombre'),
-    v_role,
+    'client',
     v_color
   );
   insert into public.member_details (member_id) values (new.id)
