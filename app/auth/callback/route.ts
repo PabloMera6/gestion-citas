@@ -2,30 +2,28 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
-// Ruta a la que apuntan los enlaces que Supabase manda por email, tanto
-// para confirmar la cuenta tras el registro como para el reseteo de
-// contraseña.
-//
-// Supabase puede mandar el enlace en dos formatos distintos según cómo
-// esté configurada la plantilla de email del proyecto:
-//   - Plantilla por defecto: ?token_hash=...&type=signup (o "recovery",
-//     "email_change", etc.) → se valida con supabase.auth.verifyOtp().
-//     Este es el formato que realmente usa Supabase "out of the box",
-//     y el que faltaba aquí: antes solo se comprobaba "code", así que
-//     con la plantilla por defecto SIEMPRE caía al mensaje de enlace
-//     inválido, aunque el enlace fuera perfectamente válido.
-//   - Flujo PKCE / OAuth: ?code=... → se intercambia con
-//     supabase.auth.exchangeCodeForSession().
-// Soportamos ambos para no depender de qué plantilla tenga configurada
-// el proyecto de Supabase.
+/**
+ * Entrada única para los enlaces de autenticación enviados por Supabase.
+ *
+ * Soporta:
+ *   - token_hash + type: plantillas que usan {{ .TokenHash }}
+ *   - code: flujo PKCE / plantillas que terminan en un código
+ *
+ * Supabase también puede devolver `error`, `error_code` y
+ * `error_description` en la URL cuando su endpoint de verificación
+ * rechaza el enlace. En ese caso mostramos un mensaje coherente.
+ */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
-  // "next" permite decidir a dónde ir después (p.ej. a /restablecer-contrasena
-  // cuando el enlace es de recuperación, en vez de ir directo al calendario).
-  const next = searchParams.get("next") ?? "/calendario";
+  const nextParam = searchParams.get("next") ?? "/calendario";
+
+  // Evita que `next` pueda convertirse en una redirección externa.
+  const next = nextParam.startsWith("/") && !nextParam.startsWith("//")
+    ? nextParam
+    : "/calendario";
 
   const supabase = await createClient();
 
@@ -34,18 +32,29 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
       type,
     });
+
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
   } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
 
-  // Enlace inválido, caducado o ya usado.
+  // Si Supabase ya ha rechazado el enlace, no intentamos reutilizarlo.
+  // Los tokens de confirmación son de un solo uso y tienen caducidad.
+  const providerError =
+    searchParams.get("error_description") ||
+    searchParams.get("error");
+
+  const message = providerError
+    ? "El enlace de acceso ya no es válido o ha caducado. Solicita un correo nuevo."
+    : "El enlace no es válido o ha caducado. Solicita un correo nuevo.";
+
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("El enlace no es válido o ha caducado. Inténtalo de nuevo.")}`
+    `${origin}/login?error=${encodeURIComponent(message)}`
   );
 }

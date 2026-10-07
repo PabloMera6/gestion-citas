@@ -7,14 +7,31 @@
 -- así que es seguro ejecutarlo sobre una base ya usada durante
 -- el desarrollo sin arrastrar restos de versiones previas.
 --
--- NO EJECUTAR EN PRODUCCIÓN CON DATOS REALES: el DROP SCHEMA
--- borra todos los datos. Para entornos con datos reales, se
--- pasa a migraciones incrementales en vez de este archivo.
+-- NO EJECUTAR EN PRODUCCIÓN CON DATOS REALES: este archivo borra
+-- TODOS los datos de `public` y TODOS los usuarios de `auth.users`.
+-- Para entornos con datos reales, se deben usar migraciones
+-- incrementales en vez de este archivo.
 -- =========================================================
 
 -- ---------------------------------------------------------
--- 0. LIMPIEZA: borra todo lo anterior de forma segura
+-- 0. LIMPIEZA: reinicio COMPLETO del proyecto
 -- ---------------------------------------------------------
+-- IMPORTANTE:
+--   Este archivo es un RESET DE DESARROLLO. Borra:
+--     1) todas las tablas/funciones/policies del esquema public
+--     2) TODOS los usuarios de Supabase Auth (auth.users)
+--
+-- `DROP SCHEMA public` NO toca `auth.users`, porque Auth vive en un
+-- esquema gestionado aparte por Supabase. Si no limpiamos auth.users,
+-- un email que existía antes del reset sigue siendo un usuario de Auth:
+-- al volver a registrarlo, Supabase puede considerar que ya existe y
+-- no enviar un nuevo correo de confirmación.
+--
+-- Quitamos primero nuestro trigger de Auth para que el borrado de los
+-- usuarios antiguos no dependa de las tablas que vamos a recrear.
+drop trigger if exists on_auth_user_created on auth.users;
+delete from auth.users;
+
 drop schema if exists public cascade;
 create schema public;
 grant usage on schema public to public;
