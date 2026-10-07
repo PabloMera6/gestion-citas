@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AjustarBonosModal from "./AjustarBonosModal";
+import HorarioRecurrenteModal from "./HorarioRecurrenteModal";
 import { initialsOf } from "@/lib/pattern";
 import type { Member } from "@/lib/types/database";
 
@@ -44,6 +45,7 @@ export default function MiembrosTabla({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [adjusting, setAdjusting] = useState<Member | null>(null);
+  const [schedulingRecurring, setSchedulingRecurring] = useState<Member | null>(null);
 
   function setCredits(id: string, credits: number) {
     setMembers((prev) =>
@@ -354,6 +356,14 @@ export default function MiembrosTabla({
                       >
                         Ajustar
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setSchedulingRecurring(m)}
+                        className="label-mono border border-line px-2 h-8 hover:!text-text hover:border-text transition-colors"
+                        title="Configurar horario fijo semanal"
+                      >
+                        Horario fijo
+                      </button>
                     </div>
                   </div>
                   {rowError?.id === m.id && (
@@ -373,6 +383,13 @@ export default function MiembrosTabla({
           member={members.find((m) => m.id === adjusting.id) ?? adjusting}
           onClose={() => setAdjusting(null)}
           onChanged={setCredits}
+        />
+      )}
+
+      {schedulingRecurring && (
+        <HorarioRecurrenteModal
+          member={members.find((m) => m.id === schedulingRecurring.id) ?? schedulingRecurring}
+          onClose={() => setSchedulingRecurring(null)}
         />
       )}
     </div>

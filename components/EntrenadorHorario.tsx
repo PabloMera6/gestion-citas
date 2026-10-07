@@ -20,6 +20,8 @@ type Props = {
   /** Solo los entrenadores pueden abrir el detalle (con miembros) de una clase */
   canViewDetail?: boolean;
   membersBySession?: Record<string, SessionMember[]>;
+  /** Id del entrenador que ha iniciado sesión, para saber si puede cancelar esta clase */
+  currentUserId?: string;
 };
 
 export default function EntrenadorHorario({
@@ -30,6 +32,7 @@ export default function EntrenadorHorario({
   defaultOpen = false,
   canViewDetail = false,
   membersBySession = {},
+  currentUserId,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -177,6 +180,7 @@ export default function EntrenadorHorario({
           trainer={trainer}
           members={membersBySession[selected.id] ?? []}
           onClose={() => setSelectedId(null)}
+          canManage={selected.trainer_id === currentUserId}
         />
       )}
     </div>

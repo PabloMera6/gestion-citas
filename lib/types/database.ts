@@ -118,9 +118,17 @@ export const TRAINER_COLORS = [
   "#0891b2", // cian
 ] as const;
 
-// Número mínimo de horas de antelación para poder cancelar una reserva.
-// Debe coincidir con public.cancellation_limit_hours() en la base de datos.
-export const CANCELLATION_LIMIT_HOURS = 4;
+// Número mínimo de horas de antelación para poder cancelar o modificar
+// una reserva. Debe coincidir con public.cancellation_limit_hours() en
+// la base de datos.
+export const CANCELLATION_LIMIT_HOURS = 12;
+
+// Si al mover (no cancelar) una reserva quedan al menos estas horas Y
+// la nueva sesión cae en la misma semana (lunes-domingo) que la
+// original, el cliente conserva el bono en vez de perderlo. Debe
+// coincidir con public.reschedule_same_week_limit_hours() en la base
+// de datos.
+export const RESCHEDULE_SAME_WEEK_LIMIT_HOURS = 5;
 
 // Aforo máximo físico de un entrenamiento de grupo ("custom_group").
 // Debe coincidir con la constraint chk_group_max_capacity en la base de datos.
@@ -175,4 +183,31 @@ export interface SessionMember {
   phone: string | null;
   class_credits: number | null;
   booked_at: string;
+}
+
+// ---------------------------------------------------------
+// Horarios recurrentes (reservas fijas semana a semana)
+// ---------------------------------------------------------
+
+/** Un día+hora fijo dentro de un patrón, tal como lo elige el entrenador en el formulario. */
+export interface RecurringSlotInput {
+  weekday: number; // 0=domingo ... 6=sábado
+  time: string; // "HH:mm"
+}
+
+/** Una ocurrencia concreta ya resuelta a un instante real (UTC), lista para mandar al backend. */
+export interface RecurringOccurrence {
+  weekday: number;
+  starts_at: string; // ISO
+  ends_at: string; // ISO
+}
+
+/** Resultado de intentar crear una ocurrencia del patrón (una fila por sesión/semana). */
+export interface RecurringScheduleResult {
+  weekday: number;
+  starts_at: string;
+  created: boolean;
+  session_id: string | null;
+  booking_id: string | null;
+  error_message: string | null;
 }

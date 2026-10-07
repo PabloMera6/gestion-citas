@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CANCELLATION_LIMIT_HOURS } from "@/lib/types/database";
+import { useToast } from "./ToastProvider";
+import MoverReservaModal from "./MoverReservaModal";
 
 type Props = {
   sessionId: string;
@@ -56,8 +58,10 @@ export default function ReservaButton({
   compact = false,
 }: Props) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [showMoveModal, setShowMoveModal] = useState(false);
 
   const hoursUntilStart = startsAt
     ? (new Date(startsAt).getTime() - Date.now()) / 3_600_000
@@ -75,12 +79,20 @@ export default function ReservaButton({
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage(data.error ?? "No se ha podido realizar la reserva.");
+        const errorMessage = data.error ?? "No se ha podido realizar la reserva.";
+        setMessage(errorMessage);
+        // El texto bajo el botón puede quedar cortado en huecos
+        // estrechos (p.ej. dentro de una celda del calendario en
+        // móvil), así que el error siempre se refuerza con un aviso
+        // flotante que no depende del espacio disponible ahí.
+        showToast(errorMessage, "error");
         return;
       }
       router.refresh();
     } catch {
-      setMessage("No se ha podido conectar con el servidor.");
+      const errorMessage = "No se ha podido conectar con el servidor.";
+      setMessage(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setLoading(false);
     }
@@ -95,12 +107,16 @@ export default function ReservaButton({
       const response = await fetch(`/api/reservas/${bookingId}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) {
-        setMessage(data.error ?? "No se ha podido cancelar la reserva.");
+        const errorMessage = data.error ?? "No se ha podido cancelar la reserva.";
+        setMessage(errorMessage);
+        showToast(errorMessage, "error");
         return;
       }
       router.refresh();
     } catch {
-      setMessage("No se ha podido conectar con el servidor.");
+      const errorMessage = "No se ha podido conectar con el servidor.";
+      setMessage(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setLoading(false);
     }
@@ -116,7 +132,10 @@ export default function ReservaButton({
   if (reserved) {
     if (isPast) return <StateTag>✓ Asististe</StateTag>;
 
-    const canCancel = !withinCancellationWindow;
+    // La ventana para cancelar y para mover es la misma
+    // (CANCELLATION_LIMIT_HOURS, 12h): por debajo de ese margen, la
+    // reserva ya no se puede modificar en absoluto.
+    const canModify = !withinCancellationWindow;
     return (
       <div className="flex flex-col items-end gap-1">
         <div className="inline-flex items-stretch h-7 border border-text text-[10px] font-semibold uppercase tracking-wider">
@@ -124,7 +143,19 @@ export default function ReservaButton({
             <CheckIcon />
             Reservada
           </span>
-          {canCancel && (
+          {canModify && !compact && bookingId && (
+            <button
+              type="button"
+              onClick={() => setShowMoveModal(true)}
+              disabled={loading}
+              aria-label="Mover reserva"
+              title="Mover a otro horario"
+              className="inline-flex items-center gap-1 px-2 border-l border-text text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
+            >
+              Mover
+            </button>
+          )}
+          {canModify && (
             <button
               type="button"
               onClick={cancelReservation}
@@ -137,12 +168,20 @@ export default function ReservaButton({
             </button>
           )}
         </div>
-        {!canCancel && !message && !compact && (
+        {!canModify && !message && !compact && (
           <p className="max-w-44 text-right text-[10px] leading-tight text-text-faint">
-            Ya no se puede cancelar (menos de {CANCELLATION_LIMIT_HOURS} h).
+            Ya no se puede modificar (menos de {CANCELLATION_LIMIT_HOURS} h).
           </p>
         )}
         {feedback}
+        {showMoveModal && bookingId && startsAt && (
+          <MoverReservaModal
+            bookingId={bookingId}
+            currentSessionId={sessionId}
+            currentStartsAt={startsAt}
+            onClose={() => setShowMoveModal(false)}
+          />
+        )}
       </div>
     );
   }

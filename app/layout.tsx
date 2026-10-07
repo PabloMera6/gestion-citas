@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
+import { ToastProvider } from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "Bíbelo — Entrenamientos y reservas",
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans text-text">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
         <RegisterServiceWorker />
       </body>
     </html>

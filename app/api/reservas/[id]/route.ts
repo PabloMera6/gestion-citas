@@ -40,3 +40,54 @@ export async function DELETE(
 
   return NextResponse.json({ booking: data });
 }
+
+// PATCH { newSessionId } → mueve la reserva a otra sesión.
+// Toda la lógica de negocio (ventana de 12h para poder modificar, y la
+// regla especial de conservar el bono si se mueve dentro de la misma
+// semana con al menos 5h de antelación) vive en la función SQL
+// reschedule_booking, que corre en una única transacción: si la nueva
+// sesión no tiene hueco, la reserva original no se toca.
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
+  }
+
+  let newSessionId: string | undefined;
+  try {
+    const body = await request.json();
+    newSessionId = body.newSessionId;
+  } catch {
+    return NextResponse.json({ error: "Petición inválida." }, { status: 400 });
+  }
+
+  if (!newSessionId) {
+    return NextResponse.json(
+      { error: "Falta el identificador de la nueva clase." },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await supabase.rpc("reschedule_booking", {
+    p_booking_id: id,
+    p_new_session_id: newSessionId,
+  });
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message || "No se ha podido mover la reserva." },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json({ bookingId: data });
+}

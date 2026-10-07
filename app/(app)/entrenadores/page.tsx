@@ -107,6 +107,7 @@ export default async function EntrenadoresPage() {
               defaultOpen={idx === 0}
               canViewDetail={isTrainer}
               membersBySession={membersBySession}
+              currentUserId={user.id}
             />
           ))}
         </div>

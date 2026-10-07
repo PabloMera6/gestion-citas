@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatFullDate, formatTime } from "@/lib/date";
 import { initialsOf, trainerPatternClass } from "@/lib/pattern";
 import type {
@@ -14,6 +15,8 @@ type Props = {
   trainer: Profile;
   members: SessionMember[];
   onClose: () => void;
+  /** Solo el entrenador dueño de la clase puede cancelarla/reactivarla */
+  canManage?: boolean;
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -30,7 +33,12 @@ export default function DetalleClaseModal({
   trainer,
   members,
   onClose,
+  canManage = false,
 }: Props) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -50,6 +58,43 @@ export default function DetalleClaseModal({
   const taken = session.max_capacity - session.available_spots;
   const isPast = end < new Date();
   const fillPct = Math.min(100, Math.round((taken / session.max_capacity) * 100));
+
+  async function toggleCancelled() {
+    const goingToCancel = !session.is_cancelled;
+    if (
+      goingToCancel &&
+      !window.confirm(
+        members.length > 0
+          ? `¿Cancelar esta clase? Se cancelará la reserva de ${members.length} ${
+              members.length === 1 ? "persona y se le devolverá su bono" : "personas y se les devolverá su bono"
+            }.`
+          : "¿Cancelar esta clase?"
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/sesiones/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isCancelled: goingToCancel }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "No se ha podido actualizar la clase.");
+        return;
+      }
+      router.refresh();
+      onClose();
+    } catch {
+      setError("No se ha podido conectar con el servidor.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -205,6 +250,35 @@ export default function DetalleClaseModal({
               </ul>
             )}
           </div>
+
+          {canManage && !isPast && (
+            <div className="border-t border-line pt-4">
+              {error && (
+                <p className="text-sm text-danger bg-danger-bg px-3 py-2 mb-3">{error}</p>
+              )}
+              <button
+                type="button"
+                onClick={toggleCancelled}
+                disabled={loading}
+                className={`w-full py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                  session.is_cancelled
+                    ? "bg-accent text-accent-ink"
+                    : "border border-danger text-danger hover:bg-danger hover:text-white"
+                }`}
+              >
+                {loading
+                  ? "Guardando…"
+                  : session.is_cancelled
+                  ? "Reactivar clase"
+                  : "Cancelar clase"}
+              </button>
+              {!session.is_cancelled && members.length > 0 && (
+                <p className="text-xs text-text-dim mt-2 text-center">
+                  Se cancelará la reserva de las {members.length} personas apuntadas y recuperarán su bono.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

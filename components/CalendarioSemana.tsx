@@ -6,6 +6,7 @@ import ReservaButton from "./ReservaButton";
 import { trainerPatternClass } from "@/lib/pattern";
 import CrearClaseModal from "./CrearClaseModal";
 import DetalleClaseModal from "./DetalleClaseModal";
+import { layoutOverlappingRanges } from "@/lib/calendar-layout";
 import type { Profile } from "@/lib/types/database";
 import {
   getWeekDays,
@@ -73,6 +74,15 @@ export default function CalendarioSemana({
     sessions
       .filter((s) => isSameDay(new Date(s.starts_at), day))
       .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+  );
+
+  // Para cada día, calculamos en qué "carril" (columna paralela) va
+  // cada sesión, de modo que dos clases a la misma hora se vean una al
+  // lado de otra en vez de una tapando a la otra.
+  const layoutByDay = sessionsByDay.map((daySessions) =>
+    layoutOverlappingRanges(
+      daySessions.map((s) => ({ id: s.id, startsAt: s.starts_at, endsAt: s.ends_at }))
+    )
   );
 
   return (
@@ -199,6 +209,15 @@ export default function CalendarioSemana({
                   const bookingId = myBookingSessionIds[session.id];
                   const isPast = end < now;
 
+                  // Columna paralela asignada a esta sesión dentro de
+                  // su grupo de solapamiento, para no dibujarla encima
+                  // de otra sesión a la misma hora.
+                  const laidOut = layoutByDay[dayIdx].find((l) => l.item.id === session.id);
+                  const lane = laidOut?.lane ?? 0;
+                  const laneCount = laidOut?.laneCount ?? 1;
+                  const widthPct = 100 / laneCount;
+                  const leftPct = lane * widthPct;
+
                   return (
                     <div
                       key={session.id}
@@ -207,8 +226,14 @@ export default function CalendarioSemana({
                           setSelectedSessionId(session.id);
                         }
                       }}
-                      style={{ top: `${startOffset + 2}px`, height: `${height}px`, borderLeftColor: session.trainer_color || "#6366f1" }}
-                      className={`absolute left-1 right-1 border border-line border-l-[4px] bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
+                      style={{
+                        top: `${startOffset + 2}px`,
+                        height: `${height}px`,
+                        left: `calc(${leftPct}% + ${lane === 0 ? 4 : 2}px)`,
+                        width: `calc(${widthPct}% - ${laneCount > 1 ? 4 : 8}px)`,
+                        borderLeftColor: session.trainer_color || "#6366f1",
+                      }}
+                      className={`absolute border border-line border-l-[4px] bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
                         session.trainer_id
                       )} ${isTrainer ? "cursor-pointer hover:border-text" : ""} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
                     >
@@ -291,6 +316,7 @@ export default function CalendarioSemana({
           } as Profile}
           members={membersBySession[selectedSession.id] ?? []}
           onClose={() => setSelectedSessionId(null)}
+          canManage={selectedSession.trainer_id === currentUserId}
         />
       )}
 

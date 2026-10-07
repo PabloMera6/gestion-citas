@@ -202,6 +202,15 @@ button.bg-accent:active:not(:disabled) {
   animation: pop-in 0.18s ease-out both;
 }
 
+/* Entrada de los toasts/avisos globales */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out both;
+}
+
 /* ---------- Tramas por entrenador (en lugar de color) ---------- */
 .pat-0 { background-image: none; }
 .pat-1 {
