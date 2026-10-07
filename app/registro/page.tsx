@@ -15,8 +15,6 @@ export default function RegistroPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,28 +53,6 @@ export default function RegistroPage() {
     setSuccess(true);
   }
 
-  async function handleResendConfirmation() {
-    setResending(true);
-    setResent(false);
-
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    setResending(false);
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
-    setResent(true);
-  }
-
   if (success) {
     return (
       <AuthShell>
@@ -91,22 +67,6 @@ export default function RegistroPage() {
         <p className="text-text-dim mt-4 text-sm">
           ¿No lo ves? Revisa también la carpeta de spam o promociones.
         </p>
-        <button
-          type="button"
-          onClick={handleResendConfirmation}
-          disabled={resending}
-          className="mt-5 text-sm underline underline-offset-4 disabled:opacity-50"
-        >
-          {resending ? "Reenviando…" : "Reenviar email de confirmación"}
-        </button>
-        {resent && (
-          <p className="text-text-dim mt-3 text-sm">
-            Hemos enviado otro email de confirmación.
-          </p>
-        )}
-        {error && (
-          <p className="text-sm text-danger bg-danger-bg px-3 py-2 mt-4">{error}</p>
-        )}
       </AuthShell>
     );
   }

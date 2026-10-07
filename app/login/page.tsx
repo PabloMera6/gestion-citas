@@ -49,18 +49,12 @@ function LoginForm() {
   async function handleResendConfirmation() {
     if (!unconfirmedEmail) return;
     setResending(true);
-    const { error } = await supabase.auth.resend({
+    await supabase.auth.resend({
       type: "signup",
       email: unconfirmedEmail,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setResending(false);
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
     setResent(true);
   }
 
