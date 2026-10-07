@@ -12,14 +12,15 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
+
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           } catch {
-            // Se puede ignorar si se llama desde un Server Component;
-            // el middleware se encarga de refrescar la sesión.
+            // Puede ocurrir cuando se llama desde un Server Component
+            // donde las cookies son de solo lectura.
           }
         },
       },
