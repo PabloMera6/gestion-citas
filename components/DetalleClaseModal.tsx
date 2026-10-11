@@ -51,6 +51,13 @@ export default function DetalleClaseModal({
   const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Mientras el modal de "mover" (abierto desde el ReservaButton de
+  // aquí abajo) está activo, este modal se OCULTA visualmente en vez
+  // de desmontarse (onClose). Si se desmontara, el propio
+  // ReservaButton desaparecería con él antes de llegar a pintar su
+  // modal de mover, y "Mover" no haría nada. Al cerrarse el de mover,
+  // este vuelve a mostrarse.
+  const [hiddenForMove, setHiddenForMove] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -114,7 +121,9 @@ export default function DetalleClaseModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm px-0 sm:px-4"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm px-0 sm:px-4 ${
+        hiddenForMove ? "hidden" : ""
+      }`}
       onClick={onClose}
     >
       <div
@@ -297,7 +306,8 @@ export default function DetalleClaseModal({
                     cancelled={session.is_cancelled}
                     isPast={isPast}
                     startsAt={session.starts_at}
-                    onBeforeMove={onClose}
+                    onMoveModalChange={setHiddenForMove}
+                    onMoved={onClose}
                   />
                 </div>
               </div>

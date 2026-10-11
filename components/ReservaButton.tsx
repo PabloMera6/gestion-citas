@@ -25,13 +25,22 @@ type Props = {
    */
   hideReservedTag?: boolean;
   /**
-   * Se llama justo antes de abrir el modal de mover. Pensado para
-   * cuando este botón vive dentro de otro modal (p.ej. el detalle de
-   * clase abierto desde el calendario): permite que ese modal
-   * contenedor se cierre primero, para no tener dos modales
-   * apilados a la vez.
+   * Se llama al abrir y al cerrar el modal de mover (con true/false).
+   * Pensado para cuando este botón vive dentro de otro modal (p.ej.
+   * el detalle de clase abierto desde el calendario): permite que
+   * ese modal contenedor se OCULTE mientras tanto (no se desmonte:
+   * si se desmontara, este propio componente desaparecería con él
+   * antes de llegar a pintar su modal de mover).
    */
-  onBeforeMove?: () => void;
+  onMoveModalChange?: (open: boolean) => void;
+  /**
+   * Se llama cuando la reserva se ha movido con éxito desde el modal
+   * de mover (además de refrescarse la página). Pensado para que un
+   * modal contenedor (el detalle de clase) se cierre del todo en ese
+   * caso, en vez de volver a mostrarse con datos de la sesión que ya
+   * se abandonó.
+   */
+  onMoved?: () => void;
 };
 
 const CheckIcon = () => (
@@ -73,7 +82,8 @@ export default function ReservaButton({
   startsAt,
   compact = false,
   hideReservedTag = false,
-  onBeforeMove,
+  onMoveModalChange,
+  onMoved,
 }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -203,8 +213,8 @@ export default function ReservaButton({
             <button
               type="button"
               onClick={() => {
-                onBeforeMove?.();
                 setShowMoveModal(true);
+                onMoveModalChange?.(true);
               }}
               disabled={loading}
               aria-label="Mover reserva"
@@ -242,7 +252,14 @@ export default function ReservaButton({
             bookingId={bookingId}
             currentSessionId={sessionId}
             currentStartsAt={startsAt}
-            onClose={() => setShowMoveModal(false)}
+            onClose={() => {
+              setShowMoveModal(false);
+              onMoveModalChange?.(false);
+            }}
+            onMoved={() => {
+              setShowMoveModal(false);
+              onMoved?.();
+            }}
           />
         )}
       </div>

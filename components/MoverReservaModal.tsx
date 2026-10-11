@@ -14,6 +14,13 @@ type Props = {
   currentSessionId: string;
   currentStartsAt: string;
   onClose: () => void;
+  /**
+   * Se llama en vez de onClose cuando la reserva se ha movido con
+   * éxito (si no se indica, se usa onClose también en ese caso).
+   * Útil para que, al mover desde el detalle de una clase, no vuelva
+   * a mostrarse ese detalle (ya corresponde a la sesión antigua).
+   */
+  onMoved?: () => void;
 };
 
 function startOfIsoWeek(date: Date) {
@@ -30,6 +37,7 @@ export default function MoverReservaModal({
   currentSessionId,
   currentStartsAt,
   onClose,
+  onMoved,
 }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -124,7 +132,7 @@ export default function MoverReservaModal({
         return;
       }
       router.refresh();
-      onClose();
+      (onMoved ?? onClose)();
     } catch {
       const errorMessage = "No se ha podido conectar con el servidor.";
       setError(errorMessage);
