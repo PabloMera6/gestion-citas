@@ -45,6 +45,8 @@ export default function RegistroPage() {
       setError(
         error.message === "User already registered"
           ? "Ya existe una cuenta con este email. Prueba a entrar."
+          : error.status === 429 || /rate limit/i.test(error.message)
+          ? "Se han pedido demasiados correos en poco tiempo. Espera unos minutos antes de volver a intentarlo."
           : error.message
       );
       return;

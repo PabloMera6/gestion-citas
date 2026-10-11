@@ -88,7 +88,41 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
--- Trigger: cuando alguien se registra en auth.users, se crea su profile automáticamente
+-- =========================================================
+-- MIEMBROS: BONOS DE CLASES
+--
+-- Se guardan en una tabla aparte (member_details) y NO en
+-- profiles, porque profiles es legible por todos los usuarios
+-- autenticados. Solo pueden leer esta tabla los entrenadores y
+-- el propio miembro (su saldo).
+--
+-- Los bonos NO se pueden modificar con un UPDATE directo: solo
+-- a través de adjust_class_credits() (más abajo), que exige rol
+-- entrenador, bloquea la fila (sin condiciones de carrera), impide
+-- saldos negativos y deja registro en class_credit_movements.
+-- =========================================================
+create table public.member_details (
+  member_id uuid primary key references public.profiles(id) on delete cascade,
+  class_credits int not null default 0 check (class_credits >= 0),
+  updated_at timestamptz not null default now()
+);
+
+create table public.class_credit_movements (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references public.profiles(id) on delete cascade,
+  trainer_id uuid references public.profiles(id) on delete set null,
+  delta int not null check (delta <> 0),
+  balance_after int not null check (balance_after >= 0),
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create index idx_credit_movements_member
+  on public.class_credit_movements (member_id, created_at desc);
+
+-- Trigger: cuando alguien se registra en auth.users, se crea su
+-- profile (con un color rotatorio si es entrenador) y su ficha de
+-- bonos automáticamente.
 create function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -119,8 +153,7 @@ begin
     'client',
     v_color
   );
-  insert into public.member_details (member_id) values (new.id)
-  on conflict (member_id) do nothing;
+  insert into public.member_details (member_id) values (new.id);
   return new;
 end;
 $$;
@@ -517,6 +550,42 @@ create trigger trg_check_capacity
   when (new.status = 'confirmed')
   execute procedure public.check_capacity();
 
+-- Volver a reservar una clase previamente cancelada reactiva la
+-- fila existente (cancelled -> confirmed) en vez de insertar una
+-- nueva, porque unique(session_id, client_id) impide una segunda
+-- fila para el mismo cliente y sesión. trg_check_capacity (arriba)
+-- solo salta en INSERT, así que aquí se cubre esa misma comprobación
+-- de aforo para la transición de UPDATE, y no permite superarlo.
+create function public.check_capacity_on_reactivate()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_capacity int;
+  v_taken int;
+begin
+  select max_capacity into v_capacity
+  from public.class_sessions where id = new.session_id;
+
+  select count(*) into v_taken
+  from public.bookings
+  where session_id = new.session_id and status = 'confirmed' and id <> new.id;
+
+  if v_taken >= v_capacity then
+    raise exception 'La clase está completa (aforo: %)', v_capacity;
+  end if;
+
+  new.cancelled_at := null;
+  return new;
+end;
+$$;
+
+create trigger trg_check_capacity_reactivate
+  before update of status on public.bookings
+  for each row
+  when (old.status = 'cancelled' and new.status = 'confirmed')
+  execute procedure public.check_capacity_on_reactivate();
+
 
 -- Comprobar que no se superan los entrenamientos simultáneos permitidos.
 -- El gimnasio solo tiene espacio/material para max_concurrent_sessions()
@@ -830,6 +899,8 @@ alter table public.bookings enable row level security;
 alter table public.announcements enable row level security;
 alter table public.recurring_schedules enable row level security;
 alter table public.recurring_schedule_slots enable row level security;
+alter table public.member_details enable row level security;
+alter table public.class_credit_movements enable row level security;
 
 -- Helper: saber si el usuario actual es entrenador
 create function public.is_trainer()
@@ -943,6 +1014,22 @@ create policy "bookings_update_own_or_trainer" on public.bookings
     )
   );
 
+-- Los entrenadores pueden ver las reservas de TODAS las clases (para
+-- consultar los miembros de las clases de otros entrenadores). Esta
+-- policy se combina con bookings_select_own_or_trainer mediante OR,
+-- así que no quita nada de lo que ya podía ver un cliente.
+create policy "bookings_select_all_trainers" on public.bookings
+  for select using (public.is_trainer());
+
+-- ---- MEMBER_DETAILS / CLASS_CREDIT_MOVEMENTS ----
+-- Solo el propio miembro (su saldo) o un entrenador pueden leer estas
+-- tablas; profiles es legible por todos, pero los bonos no.
+create policy "member_details_select_own_or_trainer" on public.member_details
+  for select using (member_id = auth.uid() or public.is_trainer());
+
+create policy "credit_movements_select_own_or_trainer" on public.class_credit_movements
+  for select using (member_id = auth.uid() or public.is_trainer());
+
 -- ---- ANNOUNCEMENTS ----
 create policy "announcements_select_all" on public.announcements
   for select using (auth.role() = 'authenticated');
@@ -976,60 +1063,8 @@ left join (
   group by session_id
 ) b on b.session_id = s.id;
 
--- =========================================================
--- MIEMBROS: BONOS DE CLASES
---
--- Se guardan en una tabla aparte (member_details) y NO en
--- profiles, porque profiles es legible por todos los usuarios
--- autenticados. Solo pueden leer esta tabla los entrenadores y
--- el propio miembro (su saldo).
---
--- Los bonos NO se pueden modificar con un UPDATE directo: solo
--- a través de adjust_class_credits(), que exige rol entrenador,
--- bloquea la fila (sin condiciones de carrera), impide saldos
--- negativos y deja registro en class_credit_movements.
--- =========================================================
-
-create table if not exists public.member_details (
-  member_id uuid primary key references public.profiles(id) on delete cascade,
-  class_credits int not null default 0 check (class_credits >= 0),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.class_credit_movements (
-  id uuid primary key default gen_random_uuid(),
-  member_id uuid not null references public.profiles(id) on delete cascade,
-  trainer_id uuid references public.profiles(id) on delete set null,
-  delta int not null check (delta <> 0),
-  balance_after int not null check (balance_after >= 0),
-  reason text,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists idx_credit_movements_member
-  on public.class_credit_movements (member_id, created_at desc);
-
-alter table public.member_details enable row level security;
-alter table public.class_credit_movements enable row level security;
-
-drop policy if exists "member_details_select_own_or_trainer" on public.member_details;
-create policy "member_details_select_own_or_trainer" on public.member_details
-  for select using (member_id = auth.uid() or public.is_trainer());
-
-drop policy if exists "credit_movements_select_own_or_trainer" on public.class_credit_movements;
-create policy "credit_movements_select_own_or_trainer" on public.class_credit_movements
-  for select using (member_id = auth.uid() or public.is_trainer());
-
--- Los entrenadores pueden ver las reservas de TODAS las clases (para
--- consultar los miembros de las clases de otros entrenadores).
--- Las policies permisivas se combinan con OR, así que no afecta a
--- lo que ya podía ver un cliente.
-drop policy if exists "bookings_select_all_trainers" on public.bookings;
-create policy "bookings_select_all_trainers" on public.bookings
-  for select using (public.is_trainer());
-
 -- Ajustar bonos (suma o resta). Devuelve el nuevo saldo.
-create or replace function public.adjust_class_credits(
+create function public.adjust_class_credits(
   p_member uuid,
   p_delta int,
   p_reason text default null
@@ -1076,86 +1111,6 @@ begin
   return v_new;
 end;
 $$;
-
--- El trigger de alta también crea la ficha de bonos del miembro.
---
--- OJO: esta es la segunda definición de handle_new_user() en este
--- fichero (la primera está más arriba, junto a la tabla profiles).
--- Con "create or replace" esta es la que de verdad queda activa al
--- ejecutar schema.sql entero, así que el rol NUNCA se toma de
--- raw_user_meta_data aquí tampoco (ver el comentario en la primera
--- definición): un registro anterior de este archivo volvía a leer
--- el rol del propio usuario y reabría el agujero de seguridad que ya
--- se había cerrado en la primera definición.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-begin
-  insert into public.profiles (id, full_name, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', 'Sin nombre'),
-    'client'
-  );
-
-  insert into public.member_details (member_id)
-  values (new.id)
-  on conflict (member_id) do nothing;
-
-  return new;
-end;
-$$;
-
--- Fichas para los usuarios que ya existían
-insert into public.member_details (member_id)
-select id from public.profiles
-on conflict (member_id) do nothing;
-
-grant all on public.member_details, public.class_credit_movements
-  to anon, authenticated, service_role;
-
--- =========================================================
--- RESERVAS: volver a reservar una clase cancelada
---
--- Cancelar una reserva solo cambia su estado a 'cancelled' (la fila
--- se conserva y por eso unique(session_id, client_id) impedía volver a
--- reservar). La app ahora REACTIVA esa fila (cancelled -> confirmed).
--- El trigger de aforo solo saltaba en INSERT, así que aquí se amplía
--- a esa transición para que cancelar y reservar de nuevo no permita
--- superar el aforo.
--- =========================================================
-create or replace function public.check_capacity_on_reactivate()
-returns trigger
-language plpgsql
-as $$
-declare
-  v_capacity int;
-  v_taken int;
-begin
-  select max_capacity into v_capacity
-  from public.class_sessions where id = new.session_id;
-
-  select count(*) into v_taken
-  from public.bookings
-  where session_id = new.session_id and status = 'confirmed' and id <> new.id;
-
-  if v_taken >= v_capacity then
-    raise exception 'La clase está completa (aforo: %)', v_capacity;
-  end if;
-
-  new.cancelled_at := null;
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_check_capacity_reactivate on public.bookings;
-create trigger trg_check_capacity_reactivate
-  before update of status on public.bookings
-  for each row
-  when (old.status = 'cancelled' and new.status = 'confirmed')
-  execute procedure public.check_capacity_on_reactivate();
 
 -- =========================================================
 -- FIN DEL ESQUEMA

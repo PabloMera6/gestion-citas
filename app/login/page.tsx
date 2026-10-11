@@ -49,12 +49,22 @@ function LoginForm() {
   async function handleResendConfirmation() {
     if (!unconfirmedEmail) return;
     setResending(true);
-    await supabase.auth.resend({
+    const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email: unconfirmedEmail,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setResending(false);
+
+    if (resendError) {
+      setError(
+        resendError.status === 429 || /rate limit/i.test(resendError.message)
+          ? "Se han pedido demasiados correos en poco tiempo. Espera unos minutos antes de volver a intentarlo."
+          : resendError.message
+      );
+      return;
+    }
+
     setResent(true);
   }
 

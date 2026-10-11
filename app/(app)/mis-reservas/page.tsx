@@ -115,6 +115,7 @@ function ReservaCard({
           cancelled={session.is_cancelled}
           isPast={isPast}
           startsAt={session.starts_at}
+          hideReservedTag
         />
       )}
     </div>

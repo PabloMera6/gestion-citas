@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ReservaButton from "./ReservaButton";
 import { trainerPatternClass } from "@/lib/pattern";
 import CrearClaseModal from "./CrearClaseModal";
 import DetalleClaseModal from "./DetalleClaseModal";
@@ -221,11 +220,7 @@ export default function CalendarioSemana({
                   return (
                     <div
                       key={session.id}
-                      onClick={() => {
-                        if (isTrainer) {
-                          setSelectedSessionId(session.id);
-                        }
-                      }}
+                      onClick={() => setSelectedSessionId(session.id)}
                       style={{
                         top: `${startOffset + 2}px`,
                         height: `${height}px`,
@@ -233,9 +228,9 @@ export default function CalendarioSemana({
                         width: `calc(${widthPct}% - ${laneCount > 1 ? 4 : 8}px)`,
                         borderLeftColor: session.trainer_color || "#6366f1",
                       }}
-                      className={`absolute border border-line border-l-[4px] bg-bg px-2 py-1 overflow-hidden ${trainerPatternClass(
+                      className={`absolute border border-line border-l-[4px] bg-bg px-2 py-1 overflow-hidden cursor-pointer hover:border-text ${trainerPatternClass(
                         session.trainer_id
-                      )} ${isTrainer ? "cursor-pointer hover:border-text" : ""} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
+                      )} ${session.is_cancelled || isPast ? "opacity-45" : ""}`}
                     >
                       <p className="text-[11px] font-semibold truncate">
                         <span className="bg-bg pr-1">
@@ -260,19 +255,14 @@ export default function CalendarioSemana({
                           <span className="bg-bg pr-1">Cancelada</span>
                         </p>
                       )}
-                      {!isTrainer && !session.is_cancelled && height > 55 && (
-                        <div className="mt-1 flex justify-start">
-                          <ReservaButton
-                            compact
-                            sessionId={session.id}
-                            bookingId={bookingId}
-                            reserved={Boolean(bookingId)}
-                            availableSpots={session.available_spots}
-                            cancelled={session.is_cancelled}
-                            isPast={isPast}
-                            startsAt={session.starts_at}
-                          />
-                        </div>
+                      {!isTrainer && !session.is_cancelled && !isPast && !bookingId && height > 55 && (
+                        <p className="text-[9px] text-text-faint truncate mt-0.5">
+                          <span className="bg-bg pr-1">
+                            {session.available_spots > 0
+                              ? `${session.available_spots} ${session.available_spots === 1 ? "plaza libre" : "plazas libres"} · toca para reservar`
+                              : "Completa"}
+                          </span>
+                        </p>
                       )}
                     </div>
                   );
@@ -296,12 +286,10 @@ export default function CalendarioSemana({
       <p className="mt-3 text-xs text-text-faint">
         {isTrainer
           ? "Toca una franja horaria vacía para crear una clase."
-          : "Toca 'Reservar plaza' en una clase para apuntarte."}
+          : "Toca una clase para ver el detalle y reservar."}
       </p>
 
-
-
-      {selectedSession && isTrainer && (
+      {selectedSession && (
         <DetalleClaseModal
           session={selectedSession}
           trainer={{
@@ -316,7 +304,10 @@ export default function CalendarioSemana({
           } as Profile}
           members={membersBySession[selectedSession.id] ?? []}
           onClose={() => setSelectedSessionId(null)}
-          canManage={selectedSession.trainer_id === currentUserId}
+          canManage={isTrainer && selectedSession.trainer_id === currentUserId}
+          clientView={
+            isTrainer ? undefined : { bookingId: myBookingSessionIds[selectedSession.id] }
+          }
         />
       )}
 

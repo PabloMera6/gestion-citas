@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CANCELLATION_LIMIT_HOURS } from "@/lib/types/database";
 import { useToast } from "./ToastProvider";
+import { useConfirm } from "./ConfirmProvider";
 import MoverReservaModal from "./MoverReservaModal";
 
 type Props = {
@@ -16,6 +17,13 @@ type Props = {
   startsAt?: string;
   /** Versión mínima (solo iconos en la acción) para huecos estrechos como el calendario */
   compact?: boolean;
+  /**
+   * Oculta la etiqueta "Reservada" cuando ya está reservada, dejando
+   * solo los botones de Mover/Cancelar. Pensado para listas donde el
+   * hecho de aparecer ya implica que está reservada (ej. "Mis
+   * reservas"), donde la etiqueta es redundante.
+   */
+  hideReservedTag?: boolean;
 };
 
 const CheckIcon = () => (
@@ -56,9 +64,11 @@ export default function ReservaButton({
   isPast = false,
   startsAt,
   compact = false,
+  hideReservedTag = false,
 }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -69,6 +79,14 @@ export default function ReservaButton({
   const withinCancellationWindow = hoursUntilStart < CANCELLATION_LIMIT_HOURS;
 
   async function reserve() {
+    const confirmed = await confirm({
+      title: "¿Reservar esta clase?",
+      description: "Se descontará un bono de tu saldo disponible.",
+      confirmLabel: "Sí, reservar",
+      cancelLabel: "Cancelar",
+    });
+    if (!confirmed) return;
+
     setLoading(true);
     setMessage(null);
     try {
@@ -100,7 +118,14 @@ export default function ReservaButton({
 
   async function cancelReservation() {
     if (!bookingId) return;
-    if (!window.confirm("¿Cancelar tu reserva de esta clase?")) return;
+    const confirmed = await confirm({
+      title: "¿Cancelar tu reserva?",
+      description: "Se cancelará tu plaza en esta clase y recuperarás el bono, si procede.",
+      confirmLabel: "Sí, cancelar",
+      cancelLabel: "No, mantener",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     setLoading(true);
     setMessage(null);
     try {
@@ -136,13 +161,22 @@ export default function ReservaButton({
     // (CANCELLATION_LIMIT_HOURS, 12h): por debajo de ese margen, la
     // reserva ya no se puede modificar en absoluto.
     const canModify = !withinCancellationWindow;
+
+    // Si se oculta la etiqueta "Reservada" y tampoco hay nada que
+    // mover/cancelar (fuera de la ventana permitida), no quedaría
+    // nada que mostrar en esta fila: mantenemos la etiqueta en ese
+    // caso concreto para no dejar un hueco vacío sin explicación.
+    const showReservedTag = !hideReservedTag || !canModify;
+
     return (
       <div className="flex flex-col items-end gap-1">
         <div className="inline-flex items-stretch h-7 border border-text text-[10px] font-semibold uppercase tracking-wider">
-          <span className="inline-flex items-center gap-1 px-2 bg-text text-bg">
-            <CheckIcon />
-            Reservada
-          </span>
+          {showReservedTag && (
+            <span className="inline-flex items-center gap-1 px-2 bg-text text-bg">
+              <CheckIcon />
+              Reservada
+            </span>
+          )}
           {canModify && !compact && bookingId && (
             <button
               type="button"
@@ -150,7 +184,9 @@ export default function ReservaButton({
               disabled={loading}
               aria-label="Mover reserva"
               title="Mover a otro horario"
-              className="inline-flex items-center gap-1 px-2 border-l border-text text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
+              className={`inline-flex items-center gap-1 px-2 text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50 ${
+                showReservedTag ? "border-l border-text" : ""
+              }`}
             >
               Mover
             </button>
@@ -162,7 +198,9 @@ export default function ReservaButton({
               disabled={loading}
               aria-label="Cancelar reserva"
               title="Cancelar reserva"
-              className="inline-flex items-center gap-1 px-2 border-l border-text text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
+              className={`inline-flex items-center gap-1 px-2 text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50 ${
+                showReservedTag || (!compact && bookingId) ? "border-l border-text" : ""
+              }`}
             >
               {loading ? "…" : compact ? <XIcon /> : "Cancelar"}
             </button>

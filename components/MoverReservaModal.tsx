@@ -4,12 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFullDate, formatTime } from "@/lib/date";
-import {
-  CANCELLATION_LIMIT_HOURS,
-  RESCHEDULE_SAME_WEEK_LIMIT_HOURS,
-} from "@/lib/types/database";
+import { RESCHEDULE_SAME_WEEK_LIMIT_HOURS } from "@/lib/types/database";
 import type { SessionWithAvailability } from "@/lib/types/database";
 import { useToast } from "./ToastProvider";
+import { useConfirm } from "./ConfirmProvider";
 
 type Props = {
   bookingId: string;
@@ -35,10 +33,16 @@ export default function MoverReservaModal({
 }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [sessions, setSessions] = useState<SessionWithAvailability[] | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [movingTo, setMovingTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const currentWeekStart = useMemo(
+    () => startOfIsoWeek(new Date(currentStartsAt)).getTime(),
+    [currentStartsAt]
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -68,13 +72,42 @@ export default function MoverReservaModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSessionId]);
 
-  const currentWeekStart = useMemo(
-    () => startOfIsoWeek(new Date(currentStartsAt)).getTime(),
-    [currentStartsAt]
-  );
   const hoursUntilCurrent = (new Date(currentStartsAt).getTime() - Date.now()) / 3_600_000;
 
-  async function move(newSessionId: string) {
+  async function move(session: SessionWithAvailability) {
+    const sameWeek = startOfIsoWeek(new Date(session.starts_at)).getTime() === currentWeekStart;
+    const start = new Date(session.starts_at);
+
+    // Mover a otra semana cuenta como cancelar y reservar de nuevo: se
+    // gasta un bono nuevo y se pierde el que ya estaba asignado a esta
+    // sesión. Antes de hacerlo, pedimos confirmación explícita
+    // explicando esa consecuencia, para que no ocurra por una
+    // pulsación accidental. Si es la misma semana, igualmente pedimos
+    // una confirmación simple (toda acción que cambia el estado la
+    // pide), pero sin el aviso de pérdida de bono porque aquí sí se
+    // conserva (si hay antelación suficiente).
+    const confirmed = await confirm(
+      sameWeek
+        ? {
+            title: "¿Mover tu reserva?",
+            description: `Se moverá tu reserva a ${formatFullDate(start)} a las ${formatTime(
+              start
+            )}.`,
+            confirmLabel: "Sí, mover",
+            cancelLabel: "Cancelar",
+          }
+        : {
+            title: "¿Mover la clase a otra semana?",
+            description:
+              "Vas a mover tu reserva a una semana distinta. Esto cuenta como cancelar esta reserva y crear una nueva: perderás el bono ya asignado a esta sesión y se descontará otro bono nuevo. ¿Seguro que quieres continuar?",
+            confirmLabel: "Sí, mover",
+            cancelLabel: "No, mantener",
+            tone: "danger",
+          }
+    );
+    if (!confirmed) return;
+
+    const newSessionId = session.id;
     setMovingTo(newSessionId);
     setError(null);
     try {
@@ -119,8 +152,9 @@ export default function MoverReservaModal({
           {hoursUntilCurrent >= RESCHEDULE_SAME_WEEK_LIMIT_HOURS ? (
             <p className="text-sm text-text-dim mt-3">
               Si eliges un horario de <strong className="text-text">esta misma semana</strong>,
-              conservas tu bono. Si eliges otra semana, se contará como cancelar y reservar de
-              nuevo (perderías el bono de esta sesión y se descontaría otro al reservar).
+              conservas tu bono. Si eliges otra semana, te pediremos confirmación: cuenta como
+              cancelar y reservar de nuevo (perderías el bono de esta sesión y se descontaría
+              otro al reservar).
             </p>
           ) : (
             <p className="text-sm text-text-dim mt-3">
@@ -167,7 +201,7 @@ export default function MoverReservaModal({
                     <button
                       type="button"
                       disabled={full || movingTo !== null}
-                      onClick={() => move(s.id)}
+                      onClick={() => move(s)}
                       className="shrink-0 h-7 px-2.5 border border-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-40"
                     >
                       {movingTo === s.id ? "…" : full ? "Completa" : "Elegir"}

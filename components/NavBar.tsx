@@ -197,7 +197,7 @@ export default function NavBar({ profile }: { profile: Profile }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 flex-1 text-[10px] font-medium uppercase tracking-wider transition-colors border-t-2 ${
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 flex-1 text-[10px] font-medium uppercase tracking-wider text-center leading-tight transition-colors border-t-2 ${
                   active ? "text-text border-accent" : "text-text-dim border-transparent"
                 }`}
               >

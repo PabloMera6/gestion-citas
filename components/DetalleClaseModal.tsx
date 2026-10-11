@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatFullDate, formatTime } from "@/lib/date";
 import { initialsOf, trainerPatternClass } from "@/lib/pattern";
+import { useConfirm } from "./ConfirmProvider";
+import ReservaButton from "./ReservaButton";
 import type {
   Profile,
   SessionMember,
@@ -17,6 +19,15 @@ type Props = {
   onClose: () => void;
   /** Solo el entrenador dueño de la clase puede cancelarla/reactivarla */
   canManage?: boolean;
+  /**
+   * Vista de cliente: si se indica, el modal muestra el botón de
+   * reservar/cancelar/mover para esta sesión, en vez de los controles
+   * de gestión del entrenador. bookingId es el id de SU reserva en
+   * esta sesión, si ya está apuntado.
+   */
+  clientView?: {
+    bookingId?: string | null;
+  };
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -34,8 +45,10 @@ export default function DetalleClaseModal({
   members,
   onClose,
   canManage = false,
+  clientView,
 }: Props) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,18 +74,21 @@ export default function DetalleClaseModal({
 
   async function toggleCancelled() {
     const goingToCancel = !session.is_cancelled;
-    if (
-      goingToCancel &&
-      !window.confirm(
-        members.length > 0
-          ? `¿Cancelar esta clase? Se cancelará la reserva de ${members.length} ${
+
+    const confirmed = await confirm({
+      title: goingToCancel ? "¿Cancelar esta clase?" : "¿Reactivar esta clase?",
+      description: goingToCancel
+        ? members.length > 0
+          ? `Se cancelará la reserva de ${members.length} ${
               members.length === 1 ? "persona y se le devolverá su bono" : "personas y se les devolverá su bono"
             }.`
-          : "¿Cancelar esta clase?"
-      )
-    ) {
-      return;
-    }
+          : "Esta clase no tiene nadie apuntado todavía."
+        : "La clase volverá a estar disponible para reservar.",
+      confirmLabel: goingToCancel ? "Sí, cancelar" : "Sí, reactivar",
+      cancelLabel: "Volver",
+      tone: goingToCancel ? "danger" : "default",
+    });
+    if (!confirmed) return;
 
     setLoading(true);
     setError(null);
@@ -129,13 +145,17 @@ export default function DetalleClaseModal({
                   </span>
                 )}
               </div>
-              <p className="label-mono mb-1">Reserva · {formatTime(start)}</p>
+              <p className="label-mono mb-1">Clase · {formatTime(start)}</p>
               <h2 className="font-display text-3xl leading-none break-words">
-                {members.length > 0
-                  ? members.map((m) => m.full_name).join(" · ")
-                  : "Sin cliente reservado"}
+                {session.name}
               </h2>
-              <p className="text-xs text-text-dim mt-1">{session.name}</p>
+              {canManage && (
+                <p className="text-xs text-text-dim mt-1">
+                  {members.length > 0
+                    ? members.map((m) => m.full_name).join(" · ")
+                    : "Sin cliente reservado"}
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -214,42 +234,72 @@ export default function DetalleClaseModal({
             </div>
           )}
 
-          {/* Miembros */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="label-mono">Miembros apuntados</p>
-              <p className="font-display text-xl leading-none">{members.length}</p>
-            </div>
-            {members.length === 0 ? (
-              <p className="text-sm text-text-faint border border-dashed border-line px-3 py-5 text-center">
-                Todavía no hay nadie apuntado.
-              </p>
-            ) : (
-              <ul className="border border-line divide-y divide-line">
-                {members.map((m, i) => (
-                  <li key={m.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <span className="font-mono-ui text-[11px] text-text-faint w-5 shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{m.full_name}</p>
-                      {m.phone && (
-                        <p className="font-mono-ui text-[11px] text-text-dim">{m.phone}</p>
-                      )}
-                    </div>
-                    {m.class_credits !== null && (
-                      <span
-                        className="label-mono border border-line px-2 py-1 shrink-0"
-                        title="Bonos de clases disponibles"
-                      >
-                        {m.class_credits} {m.class_credits === 1 ? "bono" : "bonos"}
+          {/* Miembros: solo visible para el entrenador dueño de la clase.
+              Para un cliente, mostrar nombre, teléfono y bonos del resto
+              de apuntados expondría datos de otras personas que no le
+              corresponden ver; el aforo (arriba) ya le basta para saber
+              si quedan plazas. */}
+          {canManage && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="label-mono">Miembros apuntados</p>
+                <p className="font-display text-xl leading-none">{members.length}</p>
+              </div>
+              {members.length === 0 ? (
+                <p className="text-sm text-text-faint border border-dashed border-line px-3 py-5 text-center">
+                  Todavía no hay nadie apuntado.
+                </p>
+              ) : (
+                <ul className="border border-line divide-y divide-line">
+                  {members.map((m, i) => (
+                    <li key={m.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <span className="font-mono-ui text-[11px] text-text-faint w-5 shrink-0">
+                        {String(i + 1).padStart(2, "0")}
                       </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.full_name}</p>
+                        {m.phone && (
+                          <p className="font-mono-ui text-[11px] text-text-dim">{m.phone}</p>
+                        )}
+                      </div>
+                      {m.class_credits !== null && (
+                        <span
+                          className="label-mono border border-line px-2 py-1 shrink-0"
+                          title="Bonos de clases disponibles"
+                        >
+                          {m.class_credits} {m.class_credits === 1 ? "bono" : "bonos"}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Reservar/cancelar/mover: vista de cliente */}
+          {clientView && !canManage && (
+            <div className="border-t border-line pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-text-dim">
+                  {session.is_cancelled
+                    ? "Esta clase ha sido cancelada."
+                    : isPast
+                    ? "Esta clase ya ha finalizado."
+                    : "¿Te apuntas a esta clase?"}
+                </p>
+                <ReservaButton
+                  sessionId={session.id}
+                  bookingId={clientView.bookingId}
+                  reserved={Boolean(clientView.bookingId)}
+                  availableSpots={session.available_spots}
+                  cancelled={session.is_cancelled}
+                  isPast={isPast}
+                  startsAt={session.starts_at}
+                />
+              </div>
+            </div>
+          )}
 
           {canManage && !isPast && (
             <div className="border-t border-line pt-4">

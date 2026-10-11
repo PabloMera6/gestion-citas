@@ -24,7 +24,11 @@ export default function RecuperarContrasenaPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(
+        error.status === 429 || /rate limit/i.test(error.message)
+          ? "Se han pedido demasiados enlaces en poco tiempo. Espera unos minutos antes de volver a intentarlo."
+          : error.message
+      );
       return;
     }
 

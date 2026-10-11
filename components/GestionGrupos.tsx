@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "./ConfirmProvider";
 import type { Group } from "@/lib/types/database";
 
 export default function GestionGrupos({ groups }: { groups: Group[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -43,8 +45,15 @@ export default function GestionGrupos({ groups }: { groups: Group[] }) {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este grupo? Las clases asociadas se quedarán sin grupo.")) return;
+  async function handleDelete(id: string, name: string) {
+    const confirmed = await confirm({
+      title: `¿Eliminar "${name}"?`,
+      description: "Las clases asociadas a este grupo se quedarán sin grupo asignado.",
+      confirmLabel: "Sí, eliminar",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     await fetch(`/api/grupos/${id}`, { method: "DELETE" });
     router.refresh();
   }
@@ -119,7 +128,7 @@ export default function GestionGrupos({ groups }: { groups: Group[] }) {
                 )}
               </div>
               <button
-                onClick={() => handleDelete(g.id)}
+                onClick={() => handleDelete(g.id, g.name)}
                 aria-label={`Eliminar ${g.name}`}
                 className="text-text-faint hover:text-danger p-1"
               >

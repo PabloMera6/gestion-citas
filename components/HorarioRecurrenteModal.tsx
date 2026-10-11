@@ -94,7 +94,13 @@ export default function HorarioRecurrenteModal({ member, onClose }: Props) {
     [slots, weeks, duration, mondayOfFirstWeek]
   );
 
-  const invalid = slots.length === 0 || occurrences.length === 0 || !maxCapacity;
+  const invalid =
+    slots.length === 0 ||
+    occurrences.length === 0 ||
+    !maxCapacity ||
+    !duration ||
+    duration < 15 ||
+    duration > 240;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -201,7 +207,7 @@ export default function HorarioRecurrenteModal({ member, onClose }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label-mono block mb-1.5" htmlFor="rec-time">
                   Hora
@@ -211,6 +217,23 @@ export default function HorarioRecurrenteModal({ member, onClose }: Props) {
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
+                  className="w-full border border-line bg-bg px-3 py-2.5 text-sm font-mono-ui focus:outline-none focus:border-text"
+                />
+              </div>
+              <div>
+                <label className="label-mono block mb-1.5" htmlFor="rec-duration">
+                  Duración (min)
+                </label>
+                <input
+                  id="rec-duration"
+                  type="number"
+                  min={15}
+                  max={240}
+                  step={5}
+                  value={duration}
+                  onChange={(e) =>
+                    setDuration(Math.max(15, Math.min(240, Number(e.target.value))))
+                  }
                   className="w-full border border-line bg-bg px-3 py-2.5 text-sm font-mono-ui focus:outline-none focus:border-text"
                 />
               </div>
