@@ -218,7 +218,7 @@ export default function MoverReservaModal({
                       type="button"
                       disabled={full || movingTo !== null}
                       onClick={() => move(s)}
-                      className="shrink-0 h-7 px-2.5 border border-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-40"
+                      className="btn-compact shrink-0 h-7 px-2.5 border border-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-40"
                     >
                       {movingTo === s.id ? "…" : full ? "Completa" : "Elegir"}
                     </button>

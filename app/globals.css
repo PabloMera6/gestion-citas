@@ -282,6 +282,19 @@ img {
 button, input, select, textarea {
   min-height: 40px;
 }
+/* Excepción a la regla de arriba: grupos de botones compactos en
+   línea (p.ej. Reservada/Mover/Cancelar) están pensados con una
+   altura fija y menor (ver h-7 en ReservaButton), para caber en
+   espacios estrechos como una fila de "Mis reservas" o el detalle de
+   una clase. Si se les aplica el min-height general de 40px, cada
+   botón del grupo se estira a una altura distinta a la del resto
+   (el "Reservada" de al lado es un <span>, no un <button>, y no se ve
+   afectado), y el borde que los separa queda descuadrado, más largo
+   que el resto del grupo. */
+.btn-group-compact button,
+.btn-compact {
+  min-height: 0;
+}
 @media (max-width: 639px) {
   main {
     padding-left: 12px !important;

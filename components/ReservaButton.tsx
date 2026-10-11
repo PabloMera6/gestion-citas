@@ -202,7 +202,7 @@ export default function ReservaButton({
 
     return (
       <div className="flex flex-col items-end gap-1">
-        <div className="inline-flex items-stretch h-7 border border-text text-[10px] font-semibold uppercase tracking-wider">
+        <div className="btn-group-compact inline-flex items-stretch h-7 border border-text text-[10px] font-semibold uppercase tracking-wider">
           {showReservedTag && (
             <span className="inline-flex items-center gap-1 px-2 bg-text text-bg">
               <CheckIcon />
@@ -277,7 +277,7 @@ export default function ReservaButton({
         type="button"
         onClick={reserve}
         disabled={loading}
-        className="inline-flex items-center gap-1 h-7 px-2.5 border border-text bg-bg text-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
+        className="btn-compact inline-flex items-center gap-1 h-7 px-2.5 border border-text bg-bg text-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
       >
         <PlusIcon />
         {loading ? "Reservando…" : "Reservar"}
