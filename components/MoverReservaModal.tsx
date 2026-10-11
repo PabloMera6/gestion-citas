@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFullDate, formatTime } from "@/lib/date";
@@ -142,7 +143,14 @@ export default function MoverReservaModal({
     }
   }
 
-  return (
+  // Se renderiza con un portal directamente en document.body, fuera
+  // del árbol DOM de quien lo abre. Es imprescindible cuando este
+  // modal se abre desde dentro de otro modal (el detalle de clase),
+  // porque ese modal padre se oculta con display:none mientras este
+  // está abierto: un hijo de un elemento con display:none NUNCA es
+  // visible, sin importar su propio display o z-index. Sin el
+  // portal, este modal quedaba invisible aunque estuviera montado.
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm px-0 sm:px-4"
       onClick={onClose}
@@ -231,6 +239,7 @@ export default function MoverReservaModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
