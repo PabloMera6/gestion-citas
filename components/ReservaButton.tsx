@@ -24,6 +24,14 @@ type Props = {
    * reservas"), donde la etiqueta es redundante.
    */
   hideReservedTag?: boolean;
+  /**
+   * Se llama justo antes de abrir el modal de mover. Pensado para
+   * cuando este botón vive dentro de otro modal (p.ej. el detalle de
+   * clase abierto desde el calendario): permite que ese modal
+   * contenedor se cierre primero, para no tener dos modales
+   * apilados a la vez.
+   */
+  onBeforeMove?: () => void;
 };
 
 const CheckIcon = () => (
@@ -65,6 +73,7 @@ export default function ReservaButton({
   startsAt,
   compact = false,
   hideReservedTag = false,
+  onBeforeMove,
 }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -167,6 +176,19 @@ export default function ReservaButton({
     // nada que mostrar en esta fila: mantenemos la etiqueta en ese
     // caso concreto para no dejar un hueco vacío sin explicación.
     const showReservedTag = !hideReservedTag || !canModify;
+    const showMoveButton = canModify && !compact && Boolean(bookingId);
+    const showCancelButton = canModify;
+
+    // El separador (border-l) debe caer solo ENTRE dos elementos
+    // visibles, nunca antes del primero. Calculando aquí qué va
+    // realmente a mostrarse evitamos que las condiciones de cada
+    // botón se desincronicen entre sí (que era lo que dejaba un
+    // borde "suelto" sin elemento delante).
+    const isFirst = (() => {
+      if (showReservedTag) return { tag: true, move: false, cancel: false };
+      if (showMoveButton) return { tag: false, move: true, cancel: false };
+      return { tag: false, move: false, cancel: true };
+    })();
 
     return (
       <div className="flex flex-col items-end gap-1">
@@ -177,21 +199,24 @@ export default function ReservaButton({
               Reservada
             </span>
           )}
-          {canModify && !compact && bookingId && (
+          {showMoveButton && (
             <button
               type="button"
-              onClick={() => setShowMoveModal(true)}
+              onClick={() => {
+                onBeforeMove?.();
+                setShowMoveModal(true);
+              }}
               disabled={loading}
               aria-label="Mover reserva"
               title="Mover a otro horario"
               className={`inline-flex items-center gap-1 px-2 text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50 ${
-                showReservedTag ? "border-l border-text" : ""
+                isFirst.move ? "" : "border-l border-text"
               }`}
             >
               Mover
             </button>
           )}
-          {canModify && (
+          {showCancelButton && (
             <button
               type="button"
               onClick={cancelReservation}
@@ -199,7 +224,7 @@ export default function ReservaButton({
               aria-label="Cancelar reserva"
               title="Cancelar reserva"
               className={`inline-flex items-center gap-1 px-2 text-text hover:bg-text hover:text-bg transition-colors disabled:opacity-50 ${
-                showReservedTag || (!compact && bookingId) ? "border-l border-text" : ""
+                isFirst.cancel ? "" : "border-l border-text"
               }`}
             >
               {loading ? "…" : compact ? <XIcon /> : "Cancelar"}

@@ -107,16 +107,18 @@ function ReservaCard({
         </div>
       </div>
       {booking.status === "confirmed" && (
-        <ReservaButton
-          sessionId={session.id}
-          bookingId={booking.id}
-          reserved
-          availableSpots={session.available_spots}
-          cancelled={session.is_cancelled}
-          isPast={isPast}
-          startsAt={session.starts_at}
-          hideReservedTag
-        />
+        <div className="shrink-0">
+          <ReservaButton
+            sessionId={session.id}
+            bookingId={booking.id}
+            reserved
+            availableSpots={session.available_spots}
+            cancelled={session.is_cancelled}
+            isPast={isPast}
+            startsAt={session.starts_at}
+            hideReservedTag
+          />
+        </div>
       )}
     </div>
   );

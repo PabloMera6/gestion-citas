@@ -281,22 +281,25 @@ export default function DetalleClaseModal({
           {clientView && !canManage && (
             <div className="border-t border-line pt-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-text-dim">
+                <p className="text-sm text-text-dim min-w-0">
                   {session.is_cancelled
                     ? "Esta clase ha sido cancelada."
                     : isPast
                     ? "Esta clase ya ha finalizado."
                     : "¿Te apuntas a esta clase?"}
                 </p>
-                <ReservaButton
-                  sessionId={session.id}
-                  bookingId={clientView.bookingId}
-                  reserved={Boolean(clientView.bookingId)}
-                  availableSpots={session.available_spots}
-                  cancelled={session.is_cancelled}
-                  isPast={isPast}
-                  startsAt={session.starts_at}
-                />
+                <div className="shrink-0">
+                  <ReservaButton
+                    sessionId={session.id}
+                    bookingId={clientView.bookingId}
+                    reserved={Boolean(clientView.bookingId)}
+                    availableSpots={session.available_spots}
+                    cancelled={session.is_cancelled}
+                    isPast={isPast}
+                    startsAt={session.starts_at}
+                    onBeforeMove={onClose}
+                  />
+                </div>
               </div>
             </div>
           )}
