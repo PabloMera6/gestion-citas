@@ -6,6 +6,7 @@ import { formatFullDate, formatTime } from "@/lib/date";
 import { initialsOf, trainerPatternClass } from "@/lib/pattern";
 import { useConfirm } from "./ConfirmProvider";
 import ReservaButton from "./ReservaButton";
+import Spinner from "./Spinner";
 import type {
   Profile,
   SessionMember,
@@ -323,12 +324,13 @@ export default function DetalleClaseModal({
                 type="button"
                 onClick={toggleCancelled}
                 disabled={loading}
-                className={`w-full py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                className={`w-full py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 ${
                   session.is_cancelled
                     ? "bg-accent text-accent-ink"
                     : "border border-danger text-danger hover:bg-danger hover:text-white"
                 }`}
               >
+                {loading && <Spinner size={14} />}
                 {loading
                   ? "Guardando…"
                   : session.is_cancelled

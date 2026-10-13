@@ -1,6 +1,6 @@
 import { getAuthContext } from "@/lib/auth-context";
 import CalendarioSemana from "@/components/CalendarioSemana";
-import { getWeekDays } from "@/lib/date";
+import { getWeekDays, nowInBusinessTimezone } from "@/lib/date";
 import type {
   Group,
   SessionMember,
@@ -20,7 +20,12 @@ export default async function CalendarioPage({
   searchParams: Promise<{ semana?: string }>;
 }) {
   const { semana } = await searchParams;
-  const reference = semana ? new Date(semana) : new Date();
+  // Si no se pide una semana concreta por query param, "la semana
+  // actual" se decide con la hora de Madrid (ver nowInBusinessTimezone),
+  // no con la hora del servidor: en Vercel el servidor corre en UTC,
+  // y usar new Date() a secas aquí deja fuera las clases de la nueva
+  // semana durante la primera hora u hora y media de cada lunes.
+  const reference = semana ? new Date(semana) : nowInBusinessTimezone();
   const [weekStart] = getWeekDays(reference);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);

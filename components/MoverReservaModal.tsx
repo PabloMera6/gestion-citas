@@ -8,6 +8,7 @@ import { formatFullDate, formatTime } from "@/lib/date";
 import { RESCHEDULE_SAME_WEEK_LIMIT_HOURS } from "@/lib/types/database";
 import type { SessionWithAvailability } from "@/lib/types/database";
 import { useToast } from "./ToastProvider";
+import Spinner from "./Spinner";
 import { useConfirm } from "./ConfirmProvider";
 
 type Props = {
@@ -186,7 +187,10 @@ export default function MoverReservaModal({
           )}
 
           {loadingList ? (
-            <p className="text-sm text-text-faint">Cargando horarios disponibles…</p>
+            <p className="text-sm text-text-faint inline-flex items-center gap-2">
+              <Spinner size={14} />
+              Cargando horarios disponibles…
+            </p>
           ) : !sessions || sessions.length === 0 ? (
             <p className="text-sm text-text-faint">No hay otros horarios disponibles ahora mismo.</p>
           ) : (
@@ -220,7 +224,7 @@ export default function MoverReservaModal({
                       onClick={() => move(s)}
                       className="btn-compact shrink-0 h-7 px-2.5 border border-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-40"
                     >
-                      {movingTo === s.id ? "…" : full ? "Completa" : "Elegir"}
+                      {movingTo === s.id ? <Spinner size={11} /> : full ? "Completa" : "Elegir"}
                     </button>
                   </li>
                 );

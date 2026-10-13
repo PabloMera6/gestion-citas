@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CreditMovement, Member } from "@/lib/types/database";
+import Spinner from "./Spinner";
 
 type Props = {
   member: Member;
@@ -186,8 +187,9 @@ export default function AjustarBonosModal({ member, onClose, onChanged }: Props)
             <button
               type="submit"
               disabled={loading || invalid}
-              className="flex-1 bg-accent text-accent-ink py-2.5 font-semibold disabled:opacity-40"
+              className="flex-1 bg-accent text-accent-ink py-2.5 font-semibold disabled:opacity-40 inline-flex items-center justify-center gap-2"
             >
+              {loading && <Spinner size={14} />}
               {loading ? "Guardando…" : mode === "add" ? "Añadir bonos" : "Restar bonos"}
             </button>
             <button
@@ -203,7 +205,10 @@ export default function AjustarBonosModal({ member, onClose, onChanged }: Props)
         <div className="border-t border-line px-6 py-5">
           <p className="label-mono mb-3">Últimos movimientos</p>
           {history === null ? (
-            <p className="text-sm text-text-faint">Cargando…</p>
+            <p className="text-sm text-text-faint inline-flex items-center gap-2">
+              <Spinner size={14} />
+              Cargando…
+            </p>
           ) : history.length === 0 ? (
             <p className="text-sm text-text-faint">Sin movimientos todavía.</p>
           ) : (

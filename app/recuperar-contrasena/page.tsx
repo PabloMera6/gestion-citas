@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
+import Spinner from "@/components/Spinner";
 
 export default function RecuperarContrasenaPage() {
   const supabase = createClient();
@@ -84,8 +85,9 @@ export default function RecuperarContrasenaPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50"
+          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
         >
+          {loading && <Spinner size={16} />}
           {loading ? "Enviando…" : "Enviar enlace"}
         </button>
       </form>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
 import PasswordStrengthHint from "@/components/PasswordStrengthHint";
+import Spinner from "@/components/Spinner";
 import { isPasswordValid, passwordErrorMessage } from "@/lib/password";
 
 export default function RegistroPage() {
@@ -132,8 +133,9 @@ export default function RegistroPage() {
         <button
           type="submit"
           disabled={loading || !isPasswordValid(password)}
-          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50"
+          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
         >
+          {loading && <Spinner size={16} />}
           {loading ? "Creando cuenta…" : "Crear cuenta"}
         </button>
       </form>

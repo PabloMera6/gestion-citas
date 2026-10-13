@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TRAINING_MODALITIES, MAX_GROUP_CAPACITY, type Group, type TrainingModality } from "@/lib/types/database";
+import Spinner from "./Spinner";
 
 type Props = {
   open: boolean;
@@ -239,8 +240,9 @@ export default function CrearClaseModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent text-accent-ink rounded-lg py-2.5 font-semibold disabled:opacity-50"
+            className="w-full bg-accent text-accent-ink rounded-lg py-2.5 font-semibold disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
+            {loading && <Spinner size={16} />}
             {loading ? "Creando…" : "Crear clase"}
           </button>
         </form>

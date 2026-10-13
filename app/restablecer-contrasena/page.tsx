@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
 import PasswordStrengthHint from "@/components/PasswordStrengthHint";
+import Spinner from "@/components/Spinner";
 import { isPasswordValid, passwordErrorMessage } from "@/lib/password";
 
 export default function RestablecerContrasenaPage() {
@@ -101,8 +102,9 @@ export default function RestablecerContrasenaPage() {
         <button
           type="submit"
           disabled={loading || !isPasswordValid(password)}
-          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50"
+          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
         >
+          {loading && <Spinner size={16} />}
           {loading ? "Guardando…" : "Guardar contraseña"}
         </button>
       </form>

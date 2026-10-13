@@ -6,6 +6,7 @@ import { CANCELLATION_LIMIT_HOURS } from "@/lib/types/database";
 import { useToast } from "./ToastProvider";
 import { useConfirm } from "./ConfirmProvider";
 import MoverReservaModal from "./MoverReservaModal";
+import Spinner from "./Spinner";
 
 type Props = {
   sessionId: string;
@@ -237,7 +238,7 @@ export default function ReservaButton({
                 isFirst.cancel ? "" : "border-l border-text"
               }`}
             >
-              {loading ? "…" : compact ? <XIcon /> : "Cancelar"}
+              {loading ? <Spinner size={11} /> : compact ? <XIcon /> : "Cancelar"}
             </button>
           )}
         </div>
@@ -279,7 +280,7 @@ export default function ReservaButton({
         disabled={loading}
         className="btn-compact inline-flex items-center gap-1 h-7 px-2.5 border border-text bg-bg text-text text-[10px] font-semibold uppercase tracking-wider hover:bg-text hover:text-bg transition-colors disabled:opacity-50"
       >
-        <PlusIcon />
+        {loading ? <Spinner size={11} /> : <PlusIcon />}
         {loading ? "Reservando…" : "Reservar"}
       </button>
       {feedback}

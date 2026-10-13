@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "./ConfirmProvider";
+import Spinner from "./Spinner";
 import type { Group } from "@/lib/types/database";
 
 export default function GestionGrupos({ groups }: { groups: Group[] }) {
@@ -94,8 +95,9 @@ export default function GestionGrupos({ groups }: { groups: Group[] }) {
             <button
               type="submit"
               disabled={loading}
-              className="bg-accent text-accent-ink px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              className="bg-accent text-accent-ink px-4 py-2 text-sm font-semibold disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
+              {loading && <Spinner size={14} />}
               {loading ? "Creando…" : "Crear grupo"}
             </button>
             <button

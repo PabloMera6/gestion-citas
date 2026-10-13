@@ -826,6 +826,7 @@ declare
   v_same_week boolean;
   v_keep_credit boolean;
   v_new_booking_id uuid;
+  v_existing_booking_id uuid;
 begin
   select b.client_id, b.session_id, s.starts_at
   into v_client_id, v_old_session_id, v_old_starts_at
@@ -878,10 +879,34 @@ begin
   set status = 'cancelled'
   where id = p_booking_id;
 
-  insert into public.bookings (session_id, client_id, recurring_schedule_id)
-  select p_new_session_id, v_client_id, b.recurring_schedule_id
-  from public.bookings b where b.id = p_booking_id
-  returning id into v_new_booking_id;
+  -- Si el cliente ya tenía antes una reserva para la sesión DESTINO
+  -- (la canceló en su momento y ahora mueve otra reserva hacia ahí),
+  -- esa fila sigue existiendo con status='cancelled': la restricción
+  -- unique(session_id, client_id) no distingue por status, así que un
+  -- INSERT de otra fila con la misma combinación revienta con
+  -- "duplicate key value violates unique constraint
+  -- bookings_session_id_client_id_key". En ese caso se REACTIVA esa
+  -- fila existente (igual que ya hace POST /api/reservas al reservar
+  -- una clase ya cancelada antes), en vez de intentar insertar una
+  -- nueva.
+  select id into v_existing_booking_id
+  from public.bookings
+  where session_id = p_new_session_id and client_id = v_client_id;
+
+  if v_existing_booking_id is not null then
+    update public.bookings
+    set status = 'confirmed',
+        recurring_schedule_id = (
+          select recurring_schedule_id from public.bookings where id = p_booking_id
+        )
+    where id = v_existing_booking_id;
+    v_new_booking_id := v_existing_booking_id;
+  else
+    insert into public.bookings (session_id, client_id, recurring_schedule_id)
+    select p_new_session_id, v_client_id, b.recurring_schedule_id
+    from public.bookings b where b.id = p_booking_id
+    returning id into v_new_booking_id;
+  end if;
 
   return v_new_booking_id;
 end;

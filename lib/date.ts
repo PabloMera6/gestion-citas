@@ -8,6 +8,55 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 
+// Zona horaria de negocio: todo el mundo que usa esta app (clientes y
+// entrenadores) está en España, así que "qué semana es hoy" se decide
+// con la hora de Madrid, no con la del servidor.
+export const BUSINESS_TIMEZONE = "Europe/Madrid";
+
+/**
+ * Fecha/hora actual tal y como se ve en BUSINESS_TIMEZONE, pero
+ * representada como un objeto Date normal (en términos de reloj de
+ * pared: mismo año/mes/día/hora/minuto que un reloj en Madrid
+ * marcaría ahora mismo). Pensada para pasarla a getWeekDays() y
+ * decidir así en qué semana estamos.
+ *
+ * Es necesaria porque `new Date()` a secas da la hora del entorno de
+ * ejecución: en el navegador del usuario es su hora local (ya
+ * correcta si vive en España), pero en un Server Component de
+ * Next.js es la hora del SERVIDOR (en Vercel, UTC). Entre las 00:00 y
+ * las 01:00 o 02:00 (según la época del año) de cada lunes, un
+ * servidor en UTC todavía "ve" el domingo anterior, y calcular la
+ * semana con esa fecha deja fuera las clases de la semana que acaba
+ * de empezar para el usuario.
+ */
+export function nowInBusinessTimezone(): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
+  // new Date(y, m, d, ...) se construye en la hora LOCAL del entorno
+  // que ejecuta este código, pero como solo usamos los componentes
+  // año/mes/día/hora/minuto (no instantes concretos), el resultado
+  // representa correctamente "qué marca el reloj en Madrid ahora",
+  // sin importar en qué timezone corra el servidor.
+  return new Date(
+    Number(get("year")),
+    Number(get("month")) - 1,
+    Number(get("day")),
+    Number(get("hour")),
+    Number(get("minute")),
+    Number(get("second"))
+  );
+}
+
 export function getWeekDays(reference: Date): Date[] {
   const start = startOfWeek(reference, { weekStartsOn: 1 }); // lunes
   return Array.from({ length: 7 }, (_, i) => addDays(start, i));

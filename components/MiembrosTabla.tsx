@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import AjustarBonosModal from "./AjustarBonosModal";
 import HorarioRecurrenteModal from "./HorarioRecurrenteModal";
 import { initialsOf } from "@/lib/pattern";
+import Spinner from "./Spinner";
 import type { Member } from "@/lib/types/database";
 
 type SortKey = "name" | "credits" | "joined";
@@ -331,12 +332,12 @@ export default function MiembrosTabla({
                           −
                         </button>
                         <span
-                          className={`font-display text-3xl leading-none w-11 text-center ${
+                          className={`font-display text-3xl leading-none w-11 text-center inline-flex items-center justify-center ${
                             m.class_credits === 0 ? "text-text-faint" : ""
                           }`}
-                          aria-label={`${m.class_credits} bonos`}
+                          aria-label={busy ? "Actualizando bonos" : `${m.class_credits} bonos`}
                         >
-                          {m.class_credits}
+                          {busy ? <Spinner size={18} /> : m.class_credits}
                         </span>
                         <button
                           type="button"

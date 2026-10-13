@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AuthShell from "@/components/AuthShell";
+import Spinner from "@/components/Spinner";
 
 function LoginForm() {
   const router = useRouter();
@@ -116,8 +117,9 @@ function LoginForm() {
                 type="button"
                 onClick={handleResendConfirmation}
                 disabled={resending}
-                className="underline underline-offset-4 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 underline underline-offset-4 disabled:opacity-50"
               >
+                {resending && <Spinner size={12} />}
                 {resending ? "Enviando…" : "Reenviar email de confirmación"}
               </button>
             )}
@@ -128,8 +130,9 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50"
+          className="w-full bg-accent text-accent-ink py-3 font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
         >
+          {loading && <Spinner size={16} />}
           {loading ? "Entrando…" : "Entrar"}
         </button>
       </form>

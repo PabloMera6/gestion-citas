@@ -1,6 +1,6 @@
 import { getAuthContext } from "@/lib/auth-context";
 import EntrenadorHorario from "@/components/EntrenadorHorario";
-import { getWeekDays } from "@/lib/date";
+import { getWeekDays, nowInBusinessTimezone } from "@/lib/date";
 import type {
   Group,
   Profile,
@@ -30,7 +30,11 @@ export default async function EntrenadoresPage() {
 
   const isTrainer = profile?.role === "trainer";
 
-  const weekDays = getWeekDays(new Date());
+  // "La semana actual" se decide con la hora de Madrid, no con la del
+  // servidor (ver nowInBusinessTimezone en lib/date.ts): si no, un
+  // servidor en UTC deja fuera las clases de la nueva semana durante
+  // la primera hora u hora y media de cada lunes.
+  const weekDays = getWeekDays(nowInBusinessTimezone());
   const weekStart = weekDays[0];
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);

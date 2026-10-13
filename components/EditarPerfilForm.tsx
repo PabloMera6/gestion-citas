@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/types/database";
+import Spinner from "./Spinner";
 
 export default function EditarPerfilForm({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -116,8 +117,9 @@ export default function EditarPerfilForm({ profile }: { profile: Profile }) {
       <button
         type="submit"
         disabled={loading}
-        className="bg-accent text-accent-ink px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+        className="bg-accent text-accent-ink px-4 py-2.5 text-sm font-semibold disabled:opacity-50 inline-flex items-center justify-center gap-2"
       >
+        {loading && <Spinner size={14} />}
         {loading ? "Guardando…" : "Guardar cambios"}
       </button>
     </form>

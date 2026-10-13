@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { startOfWeek, addWeeks } from "date-fns";
 import { buildRecurringOccurrences } from "@/lib/date";
 import { TRAINING_MODALITIES, MAX_GROUP_CAPACITY, WEEKDAY_LABELS } from "@/lib/types/database";
+import Spinner from "./Spinner";
 import type {
   Member,
   RecurringScheduleResult,
@@ -321,8 +322,9 @@ export default function HorarioRecurrenteModal({ member, onClose }: Props) {
               <button
                 type="submit"
                 disabled={loading || invalid}
-                className="flex-1 bg-accent text-accent-ink py-2.5 font-semibold disabled:opacity-40"
+                className="flex-1 bg-accent text-accent-ink py-2.5 font-semibold disabled:opacity-40 inline-flex items-center justify-center gap-2"
               >
+                {loading && <Spinner size={14} />}
                 {loading ? "Creando sesiones…" : "Crear horario recurrente"}
               </button>
               <button
